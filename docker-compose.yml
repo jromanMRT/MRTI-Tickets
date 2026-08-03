@@ -28,7 +28,7 @@ services:
       - DATABASE_PASSWORD=root
       - DATABASE_NAME=mrti_tickets
       - CORE_API_URL=http://host.docker.internal:8477
-      - IT_MANAGEMENT_API_URL=http://host.docker.internal:3002
+      - MRTI_INFRA_API_URL=http://host.docker.internal:3002
       - AUTH_PROFILE_URL=http://host.docker.internal:3002/api/auth/me
       - AUTH_TICKET_CONTEXT_URL=http://host.docker.internal:3002/api/auth/ticket-context
       - AUTH_ASSIGNEES_URL=http://host.docker.internal:3002/api/auth/assignees

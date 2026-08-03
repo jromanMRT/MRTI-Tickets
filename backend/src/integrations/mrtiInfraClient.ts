@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const base = process.env.IT_MANAGEMENT_API_URL;
+const base = process.env.MRTI_INFRA_API_URL;
 
 export async function getDeviceInfo(deviceId: number) {
   if (!base) return null;
@@ -9,7 +9,7 @@ export async function getDeviceInfo(deviceId: number) {
     return resp.data?.data || null;
   } catch (err: any) {
     // eslint-disable-next-line no-console
-    console.warn('IT-Management fetch failed', err?.message || err);
+    console.warn('MRTI-Infra fetch failed', err?.message || err);
     return null;
   }
 }

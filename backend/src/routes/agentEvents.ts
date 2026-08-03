@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import pool from '../config/db';
 import { createTicket } from '../services/ticketService';
-import { getDeviceInfo } from '../integrations/itManagementClient';
+import { getDeviceInfo } from '../integrations/mrtiInfraClient';
 import { sendNotification } from '../integrations/coreNotifications';
 import { requireAuth } from '../middlewares/auth';
 

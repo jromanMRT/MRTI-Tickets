@@ -28,7 +28,7 @@ Ajusta:
 
 - `DATABASE_*`
 - `CORE_API_URL`
-- `IT_MANAGEMENT_API_URL`
+- `MRTI_INFRA_API_URL`
 - `AGENT_API_KEY`
 - `CORE_NOTIFICATION_URL`
 - `CORE_INTROSPECT_URL`
@@ -60,7 +60,7 @@ docker compose up --build
 ```
 
 En el servidor MRTI, Nginx publica el frontend en `/tickets/` y la API bajo
-`/tickets-api/`. Tickets reutiliza las cuentas y sesiones de IT Management.
+`/tickets-api/`. Tickets reutiliza las cuentas y sesiones de MRTI Infra.
 Los adjuntos y la base de datos se conservan en volúmenes Docker.
 
 ## Migraciones
@@ -71,7 +71,7 @@ npm run migrate
 ```
 
 La migración `002_user_uuid_support.sql` adapta los identificadores de usuario
-al formato UUID utilizado por IT Management y crea las políticas SLA iniciales.
+al formato UUID utilizado por MRTI Infra y crea las políticas SLA iniciales.
 
 ## Endpoints principales
 
@@ -96,9 +96,9 @@ al formato UUID utilizado por IT Management y crea las políticas SLA iniciales.
 - Autenticación de usuarios con token JWT o introspección.
 - Notificaciones a través de `CORE_NOTIFICATION_URL`.
 
-### IT-Management
+### MRTI Infra
 
-- Consulta de datos de equipos mediante `IT_MANAGEMENT_API_URL`.
+- Consulta de datos de equipos mediante `MRTI_INFRA_API_URL`.
 
 ### MRTI-Agent
 
