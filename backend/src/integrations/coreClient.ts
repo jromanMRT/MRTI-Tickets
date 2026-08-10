@@ -1,7 +1,13 @@
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
 
-type IntrospectResult = { active: boolean; user?: any };
+type IntrospectResult = { active: boolean; user?: any; unavailable?: boolean };
+
+const AUTH_TIMEOUT_MS = 5000;
+
+function isUnavailable(err: any): boolean {
+  return err?.code === 'ECONNABORTED' || err?.code === 'ECONNREFUSED' || !err?.response;
+}
 
 export async function introspectToken(token: string): Promise<IntrospectResult> {
   const profileUrl = process.env.AUTH_PROFILE_URL;
@@ -9,6 +15,7 @@ export async function introspectToken(token: string): Promise<IntrospectResult> 
     try {
       const resp = await axios.get(profileUrl, {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: AUTH_TIMEOUT_MS,
       });
       const profile = resp.data?.profile;
       if (!profile) return { active: false };
@@ -26,7 +33,8 @@ export async function introspectToken(token: string): Promise<IntrospectResult> 
           roles: [roleNames[profile.role] || profile.role],
         },
       };
-    } catch {
+    } catch (err: any) {
+      if (isUnavailable(err)) return { active: false, unavailable: true };
       return { active: false };
     }
   }
@@ -34,9 +42,10 @@ export async function introspectToken(token: string): Promise<IntrospectResult> 
   const introspectUrl = process.env.CORE_INTROSPECT_URL;
   if (introspectUrl) {
     try {
-      const resp = await axios.post(introspectUrl, { token });
+      const resp = await axios.post(introspectUrl, { token }, { timeout: AUTH_TIMEOUT_MS });
       return resp.data;
-    } catch {
+    } catch (err: any) {
+      if (isUnavailable(err)) return { active: false, unavailable: true };
       return { active: false };
     }
   }
@@ -61,6 +70,7 @@ export async function getTicketContext(token: string): Promise<any> {
   if (!contextUrl) return null;
   const response = await axios.get(contextUrl, {
     headers: { Authorization: `Bearer ${token}` },
+    timeout: AUTH_TIMEOUT_MS,
   });
   return response.data || null;
 }

@@ -16,7 +16,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   const token = auth.slice(7);
   try {
     const resi = await introspectToken(token);
-    if (!resi || !resi.active) return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token invalid' } });
+    if (!resi || !resi.active) {
+      if (resi?.unavailable) {
+        return res.status(503).json({ success: false, error: { code: 'AUTH_UNAVAILABLE', message: 'No se pudo contactar a MRTI Core' } });
+      }
+      return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token invalid' } });
+    }
     req.user = resi.user || {};
     const role = String(req.user.role || '').toLowerCase();
     const allowedModules: string[] = Array.isArray(req.user.allowed_modules) ? req.user.allowed_modules : [];
