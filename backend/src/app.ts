@@ -17,6 +17,7 @@ import reportsRouter from './routes/reports';
 import agentEventsRouter from './routes/agentEvents';
 import { requireAuth } from './middlewares/auth';
 import assigneesRouter from './routes/assignees';
+import ticketsSelfRouter from './routes/ticketsSelf';
 
 export function createApp() {
   const app = express();
@@ -34,6 +35,7 @@ export function createApp() {
     res.json({ success: true, data: req.user });
   });
   app.use('/api/tickets', ticketsRouter);
+  app.use('/api/tickets-self', ticketsSelfRouter);
   app.use('/api/assignees', assigneesRouter);
   app.use('/api/categories', categoriesRouter);
   app.use('/api/priorities', prioritiesRouter);
