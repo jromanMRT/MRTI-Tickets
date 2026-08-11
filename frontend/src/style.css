@@ -42,6 +42,9 @@ a { color:#2563eb; }
 .empty-state { text-align:center; }
 .empty-state h2 { margin-bottom:6px; }
 .empty-state p,.muted { color:#718096; }
+.area-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:4px; }
+.area-tab { padding:8px 16px; border:1px solid #d6dfeb; border-radius:999px; color:#475569; background:#fff; cursor:pointer; font-size:.82rem; font-weight:650; }
+.area-tab.active { color:#fff; border-color:#1d4ed8; background:#1d4ed8; }
 .filters { display:grid; grid-template-columns:minmax(220px,1fr) 190px 190px auto; gap:10px; padding:14px; }
 input,select,textarea { width:100%; padding:11px 12px; border:1px solid #d6dfeb; border-radius:9px; color:#172033; background:#fff; outline:none; }
 input:focus,select:focus,textarea:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.12); }

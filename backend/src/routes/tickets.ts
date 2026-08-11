@@ -37,6 +37,10 @@ router.get('/', requireAuth, async (req, res) => {
     clauses.push('t.priority_code = ?');
     params.push(String(req.query.priority));
   }
+  if (req.query.business_area_id) {
+    clauses.push('c.business_area_id = ?');
+    params.push(String(req.query.business_area_id));
+  }
   if (req.query.q) {
     clauses.push('(t.folio LIKE ? OR t.title LIKE ? OR t.origin_area_name LIKE ? OR t.affected_device_internal_id LIKE ?)');
     const search = `%${String(req.query.q).trim()}%`;
@@ -51,17 +55,22 @@ router.get('/', requireAuth, async (req, res) => {
               t.origin_area_name, t.origin_site_name, t.affected_device_internal_id,
               t.affected_device_name,
               s.code AS status_code, s.name AS status_name,
-              p.name AS priority_name
+              p.name AS priority_name,
+              c.business_area_id, b.name AS business_area_name
          FROM tickets t
          JOIN ticket_statuses s ON s.id = t.status_id
          LEFT JOIN ticket_priorities p ON p.code = t.priority_code
+         LEFT JOIN ticket_categories c ON c.id = t.category_id
+         LEFT JOIN business_areas b ON b.id = c.business_area_id
          ${where}
         ORDER BY t.created_at DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
     const [[countRow]]: any = await pool.query(
       `SELECT COUNT(*) AS total FROM tickets t
-       JOIN ticket_statuses s ON s.id = t.status_id ${where}`,
+       JOIN ticket_statuses s ON s.id = t.status_id
+       LEFT JOIN ticket_categories c ON c.id = t.category_id
+       ${where}`,
       params
     );
     res.json({ success: true, data: { items: rows, page, limit, total: Number(countRow.total) } });
@@ -123,11 +132,13 @@ router.get('/:id', requireAuth, async (req, res) => {
   try {
     const [rows]: any = await pool.query(
       `SELECT t.*, s.code AS status_code, s.name AS status_name,
-              c.name AS category_name, p.name AS priority_name
+              c.name AS category_name, p.name AS priority_name,
+              c.business_area_id, b.name AS business_area_name
          FROM tickets t
          JOIN ticket_statuses s ON s.id = t.status_id
          LEFT JOIN ticket_categories c ON c.id = t.category_id
          LEFT JOIN ticket_priorities p ON p.code = t.priority_code
+         LEFT JOIN business_areas b ON b.id = c.business_area_id
         WHERE t.id = ? AND t.deleted_at IS NULL LIMIT 1`,
       [Number(req.params.id)]
     );

@@ -18,6 +18,25 @@ router.post('/', requireAuth, requirePermission('Asignar tickets'), async (req, 
   const actorId = req.user?.id || null;
   const actorName = req.user?.name || null;
 
+  try {
+    const [[area]]: any = await pool.query(
+      `SELECT b.id, b.name FROM tickets t
+         JOIN ticket_categories c ON c.id = t.category_id
+         JOIN business_areas b ON b.id = c.business_area_id
+        WHERE t.id = ?`,
+      [ticketId]
+    );
+    if (area) {
+      const [members]: any = await pool.query('SELECT user_id FROM business_area_members WHERE business_area_id = ?', [area.id]);
+      if (members.length && !members.some((row: any) => row.user_id === assignedTo)) {
+        return res.status(400).json({ success: false, error: { code: 'NOT_AREA_MEMBER', message: `Esa persona no pertenece al equipo de ${area.name}` } });
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error validando el equipo del área' } });
+  }
+
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();

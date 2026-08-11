@@ -9,6 +9,7 @@ interface Ticket {
   related_device_id?: string; requester_device_internal_id?: string; requester_device_name?: string;
   affected_device_internal_id?: string; affected_device_name?: string; origin_site_name?: string;
   origin_building_name?: string; origin_floor_name?: string; origin_area_name?: string;
+  business_area_id?: number; business_area_name?: string;
   created_at: string; updated_at: string;
 }
 interface Status { code: string; name: string }
@@ -31,13 +32,16 @@ export default function TicketDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [ticketRes, statusRes, commentRes, attachmentRes, historyRes, assigneeRes] = await Promise.all([
+      const [ticketRes, statusRes, commentRes, attachmentRes, historyRes] = await Promise.all([
         api.get(`/tickets/${id}`), api.get('/statuses'), api.get(`/tickets/${id}/comments`),
         api.get(`/tickets/${id}/attachments`), api.get(`/tickets/${id}/history`),
-        api.get('/assignees'),
       ]);
-      setTicket(ticketRes.data.data); setStatuses(statusRes.data.data); setComments(commentRes.data.data);
+      const loadedTicket = ticketRes.data.data as Ticket;
+      setTicket(loadedTicket); setStatuses(statusRes.data.data); setComments(commentRes.data.data);
       setAttachments(attachmentRes.data.data); setHistory(historyRes.data.data.status_history || []);
+      // El área se resuelve primero para que el selector de responsable
+      // solo muestre al equipo de esa área (si ya tiene uno registrado).
+      const assigneeRes = await api.get('/assignees', { params: loadedTicket.business_area_id ? { business_area_id: loadedTicket.business_area_id } : {} });
       setAssignees(assigneeRes.data.data || []);
       setError('');
     } catch (requestError: any) {
@@ -124,7 +128,7 @@ export default function TicketDetail() {
         </div>
         <aside className="page-stack">
           <section className="panel metadata"><h2>Información</h2>
-            <dl><div><dt>Prioridad</dt><dd>{ticket.priority_name || ticket.priority_code || 'Sin prioridad'}</dd></div><div><dt>Categoría</dt><dd>{ticket.category_name || 'Sin categoría'}</dd></div><div><dt>Origen</dt><dd>{ticket.requester_number ? `USR-${String(ticket.requester_number).padStart(6, '0')}` : 'Sin identificar'}</dd></div><div><dt>Ubicación</dt><dd>{ticket.origin_area_name || 'Sin ubicación'}<small>{[ticket.origin_site_name, ticket.origin_building_name, ticket.origin_floor_name].filter(Boolean).join(' · ')}</small></dd></div><div><dt>Equipo habitual</dt><dd>{ticket.requester_device_internal_id || '—'}<small>{ticket.requester_device_name}</small></dd></div><div><dt>Equipo afectado</dt><dd>{ticket.affected_device_internal_id || ticket.asset_number || '—'}<small>{ticket.affected_device_name}</small></dd></div><div><dt>Responsable</dt><dd>{ticket.assigned_to_name || 'Sin asignar'}</dd></div><div><dt>Creado</dt><dd>{new Date(ticket.created_at).toLocaleString()}</dd></div></dl>
+            <dl><div><dt>Área</dt><dd>{ticket.business_area_name || 'Sin área'}</dd></div><div><dt>Prioridad</dt><dd>{ticket.priority_name || ticket.priority_code || 'Sin prioridad'}</dd></div><div><dt>Categoría</dt><dd>{ticket.category_name || 'Sin categoría'}</dd></div><div><dt>Origen</dt><dd>{ticket.requester_number ? `USR-${String(ticket.requester_number).padStart(6, '0')}` : 'Sin identificar'}</dd></div><div><dt>Ubicación</dt><dd>{ticket.origin_area_name || 'Sin ubicación'}<small>{[ticket.origin_site_name, ticket.origin_building_name, ticket.origin_floor_name].filter(Boolean).join(' · ')}</small></dd></div><div><dt>Equipo habitual</dt><dd>{ticket.requester_device_internal_id || '—'}<small>{ticket.requester_device_name}</small></dd></div><div><dt>Equipo afectado</dt><dd>{ticket.affected_device_internal_id || ticket.asset_number || '—'}<small>{ticket.affected_device_name}</small></dd></div><div><dt>Responsable</dt><dd>{ticket.assigned_to_name || 'Sin asignar'}</dd></div><div><dt>Creado</dt><dd>{new Date(ticket.created_at).toLocaleString()}</dd></div></dl>
             {assignees.length > 0 && <><button className="button secondary full-button" onClick={() => void assignToMe()} disabled={busy === 'assign'}>{busy === 'assign' ? 'Asignando…' : 'Asignarme este ticket'}</button><form className="assign-form" onSubmit={assignPerson}><select name="assignee" defaultValue={ticket.assigned_to || ''}><option value="" disabled>Seleccionar responsable</option>{assignees.map((person) => <option key={person.id} value={person.id}>{person.full_name}</option>)}</select><button className="button ghost" disabled={busy === 'assign'}>Asignar a esta persona</button></form></>}
           </section>
           <form className="panel form-stack" onSubmit={changeStatus}><h2>Cambiar estado</h2><label>Nuevo estado<select name="status" defaultValue={ticket.status_code}>{statuses.map((status) => <option key={status.code} value={status.code}>{status.name}</option>)}</select></label><label>Nota<textarea name="comment" rows={3} placeholder="Motivo del cambio (opcional)" /></label><button className="button" disabled={busy === 'status'}>{busy === 'status' ? 'Guardando…' : 'Actualizar estado'}</button></form>

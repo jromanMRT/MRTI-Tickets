@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
-interface Category { id: number; name: string }
+interface Category { id: number; name: string; business_area_id: number | null; business_area_name?: string }
 interface Priority { code: string; name: string }
 interface ContextDevice { id: string; internal_id: string; name: string; inventory_tag?: string; is_primary_user_device: boolean }
 interface TicketContext {
@@ -52,7 +52,20 @@ export default function NewTicket() {
         </section> : <div className="context-warning full">Tu cuenta todavía no tiene ubicación física asignada. El ticket se puede crear, pero no incluirá contexto automático.</div>}
         <label className="full">Título<input name="title" required maxLength={255} placeholder="Describe brevemente el problema" /></label>
         <label className="full">Descripción<textarea name="description" rows={7} placeholder="Incluye síntomas, ubicación y cualquier dato útil" /></label>
-        <label>Categoría<select name="category_id" defaultValue=""><option value="">Sin categoría</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label>Categoría<select name="category_id" defaultValue="">
+          <option value="">Sin categoría</option>
+          {Object.entries(
+            categories.reduce<Record<string, Category[]>>((groups, item) => {
+              const key = item.business_area_name || 'Sin área';
+              (groups[key] ||= []).push(item);
+              return groups;
+            }, {})
+          ).map(([areaName, items]) => (
+            <optgroup key={areaName} label={areaName}>
+              {items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </optgroup>
+          ))}
+        </select></label>
         <label>Prioridad<select name="priority_code" defaultValue="P3">{priorities.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.name}</option>)}</select></label>
         <label className="full">Equipo afectado<select name="affected_device_id" value={affectedDeviceId} onChange={(event) => setAffectedDeviceId(event.target.value)} disabled={!context?.area_devices.length}><option value="">Sin equipo específico</option>{context?.area_devices.map((device) => <option key={device.id} value={device.id}>{device.internal_id} · {device.name}{device.id === context.primary_device?.id ? ' · habitual' : ''}</option>)}</select><small>Sólo aparecen equipos registrados en tu misma área física.</small></label>
         {error && <div className="form-error full">{error}</div>}
