@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Route, Routes, NavLink } from 'react-router-dom';
+import { Route, Routes, NavLink, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
@@ -12,7 +12,9 @@ function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_tickets_sidebar_collapsed') === '1');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useTheme();
+  const location = useLocation();
   let profile: { full_name?: string; role?: string } = {};
   try { profile = JSON.parse(localStorage.getItem('auth_profile') || '{}'); } catch { profile = {}; }
 
@@ -26,6 +28,16 @@ function App() {
     }
     api.get('/session').then(() => setAuthenticated(true)).catch(() => setAuthenticated(false)).finally(() => setCheckingSession(false));
     return () => window.removeEventListener('mrti-auth-expired', expired);
+  }, []);
+
+  useEffect(() => setMobileMenuOpen(false), [location.pathname]);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
   }, []);
 
   if (checkingSession) return <main className="login-shell"><div className="login-card">Validando sesión…</div></main>;
@@ -44,15 +56,17 @@ function App() {
   }
 
   return (
-    <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}`}>
-      <aside className="sidebar">
+    <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}${mobileMenuOpen ? ' mobile-menu-open' : ''}`}>
+      <button className="sidebar-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación" />
+      <aside className="sidebar" id="tickets-sidebar" aria-label="Navegación de Tickets">
         <div className="brand-row">
           <div className="brand"><span className="brand-text">MRTI Tickets</span></div>
           <a href="/">← Core</a>
         </div>
         <nav>
-          <NavLink to="/" end><span aria-hidden="true">🏠</span><span className="nav-label">Dashboard</span></NavLink>
-          <NavLink to="/tickets"><span aria-hidden="true">🎫</span><span className="nav-label">Tickets</span></NavLink>
+          <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>
+          <NavLink to="/tickets" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">◇</span><span className="nav-label">Tickets</span></NavLink>
+          <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nueva solicitud</span></NavLink>
         </nav>
         <div className="sidebar-footer">
           <button
@@ -78,7 +92,8 @@ function App() {
       </aside>
       <main className="content">
         <header className="topbar">
-          <span>MRTI Tickets</span>
+          <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
+          <span><strong>MRTI Tickets</strong><small>Solicitudes y seguimiento</small></span>
           <div className="session-controls"><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span><button className="logout" onClick={() => { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_profile'); window.location.replace('/'); }}>Cerrar sesión</button></div>
         </header>
         <Routes>
