@@ -5,11 +5,14 @@ import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
 import NewTicket from './pages/NewTicket';
 import api from './services/api';
+import { useTheme } from './hooks/useTheme';
 import './style.css';
 
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_tickets_sidebar_collapsed') === '1');
+  const [theme, setTheme] = useTheme();
   let profile: { full_name?: string; role?: string } = {};
   try { profile = JSON.parse(localStorage.getItem('auth_profile') || '{}'); } catch { profile = {}; }
 
@@ -33,14 +36,45 @@ function App() {
     return <main className="login-shell"><div className="login-card">Redirigiendo al acceso central…</div></main>;
   }
 
+  function toggleCollapse() {
+    setCollapsed((prev) => {
+      localStorage.setItem('mrti_tickets_sidebar_collapsed', prev ? '0' : '1');
+      return !prev;
+    });
+  }
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}`}>
       <aside className="sidebar">
-        <div className="brand-row"><div className="brand">MRTI Tickets</div><a href="/">← Core</a></div>
+        <div className="brand-row">
+          <div className="brand"><span className="brand-text">MRTI Tickets</span></div>
+          <a href="/">← Core</a>
+        </div>
         <nav>
-          <NavLink to="/" end>Dashboard</NavLink>
-          <NavLink to="/tickets">Tickets</NavLink>
+          <NavLink to="/" end><span aria-hidden="true">🏠</span><span className="nav-label">Dashboard</span></NavLink>
+          <NavLink to="/tickets"><span aria-hidden="true">🎫</span><span className="nav-label">Tickets</span></NavLink>
         </nav>
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            aria-label="Cambiar tema"
+            aria-pressed={theme === 'dark'}
+          >
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={toggleCollapse}
+            title={collapsed ? 'Expandir' : 'Colapsar'}
+            aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
+          >
+            {collapsed ? '»' : '«'}
+          </button>
+        </div>
       </aside>
       <main className="content">
         <header className="topbar">
