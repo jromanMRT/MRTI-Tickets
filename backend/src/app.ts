@@ -19,6 +19,8 @@ import { requireAuth } from './middlewares/auth';
 import assigneesRouter from './routes/assignees';
 import ticketsSelfRouter from './routes/ticketsSelf';
 import businessAreasRouter from './routes/businessAreas';
+import auditEventsRouter from './routes/auditEvents';
+import { auditMutations } from './middlewares/auditMutations';
 
 export function createApp() {
   const app = express();
@@ -27,6 +29,7 @@ export function createApp() {
   app.use(helmet());
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+  app.use(auditMutations);
 
   const limiter = rateLimit({ windowMs: 60_000, max: 200 });
   app.use(limiter);
@@ -40,6 +43,7 @@ export function createApp() {
   app.use('/api/assignees', assigneesRouter);
   app.use('/api/categories', categoriesRouter);
   app.use('/api/business-areas', businessAreasRouter);
+  app.use('/api/audit-events', auditEventsRouter);
   app.use('/api/priorities', prioritiesRouter);
   app.use('/api/statuses', statusesRouter);
   app.use('/api/tickets/:id/comments', commentsRouter);
