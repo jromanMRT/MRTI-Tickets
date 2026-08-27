@@ -1,0 +1,23 @@
+@media (min-width: 901px) {
+  .app-shell,
+  .app-shell.sidebar-collapsed { display: block; }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 256px;
+    height: 100vh;
+    height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .content {
+    width: calc(100% - 256px);
+    margin-left: 256px;
+    transition: width 200ms ease, margin-left 200ms ease;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar { width: 64px; }
+  .app-shell.sidebar-collapsed .content { width: calc(100% - 64px); margin-left: 64px; }
+}

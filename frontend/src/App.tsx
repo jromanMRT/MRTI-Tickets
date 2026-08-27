@@ -7,6 +7,7 @@ import NewTicket from './pages/NewTicket';
 import api from './services/api';
 import { useTheme } from './hooks/useTheme';
 import './style.css';
+import './shell.css';
 
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
