@@ -10,31 +10,48 @@ declare global {
   }
 }
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function authenticateCore(req: Request, res: Response): Promise<boolean> {
   const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token missing' } });
+  if (!auth || !auth.startsWith('Bearer ')) {
+    res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token missing' } });
+    return false;
+  }
   const token = auth.slice(7);
   try {
     const resi = await introspectToken(token);
     if (!resi || !resi.active) {
       if (resi?.unavailable) {
-        return res.status(503).json({ success: false, error: { code: 'AUTH_UNAVAILABLE', message: 'No se pudo contactar a MRTI Core' } });
+        res.status(503).json({ success: false, error: { code: 'AUTH_UNAVAILABLE', message: 'No se pudo contactar a MRTI Core' } });
+        return false;
       }
-      return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token invalid' } });
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token invalid' } });
+      return false;
     }
     req.user = resi.user || {};
-    const role = String(req.user.role || '').toLowerCase();
-    const allowedModules: string[] = Array.isArray(req.user.allowed_modules) ? req.user.allowed_modules : [];
-    if (role !== 'administrator' && !allowedModules.includes('tickets')) {
-      return res.status(403).json({
-        success: false,
-        error: { code: 'MODULE_FORBIDDEN', message: 'Tu área no tiene acceso a MRTI Tickets' },
-      });
-    }
-    return next();
+    return true;
   } catch {
-    return res.status(500).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Error verifying token' } });
+    res.status(500).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Error verifying token' } });
+    return false;
   }
+}
+
+// Sesión válida de Core sin conceder acceso al módulo operativo de Tickets.
+// Se usa sólo en contratos de autoservicio que limitan los datos al usuario.
+export async function requireCoreAuth(req: Request, res: Response, next: NextFunction) {
+  if (await authenticateCore(req, res)) return next();
+}
+
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!(await authenticateCore(req, res))) return;
+  const role = String(req.user?.role || '').toLowerCase();
+  const allowedModules: string[] = Array.isArray(req.user?.allowed_modules) ? req.user.allowed_modules : [];
+  if (role !== 'administrator' && !allowedModules.includes('tickets')) {
+    return res.status(403).json({
+      success: false,
+      error: { code: 'MODULE_FORBIDDEN', message: 'Tu área no tiene acceso a MRTI Tickets' },
+    });
+  }
+  return next();
 }
 
 export function requirePermission(permission: string) {
