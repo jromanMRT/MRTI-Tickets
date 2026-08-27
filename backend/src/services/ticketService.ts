@@ -5,8 +5,10 @@ import { randomUUID } from 'crypto';
 export async function createTicket(data: {
   title: string;
   description?: string | null;
+  business_area_id: number;
   category_id?: number | null;
   subcategory_id?: number | null;
+  categories?: Array<{ category_id: number; subcategory_id: number | null }>;
   related_device_id?: string | null;
   asset_number?: string | null;
   priority_code?: string | null;
@@ -51,9 +53,9 @@ export async function createTicket(data: {
          requester_device_id, requester_device_internal_id, requester_device_name,
          affected_device_internal_id, affected_device_name,
          origin_site_id, origin_site_name, origin_building_name, origin_floor_name,
-         origin_area_id, origin_area_name, priority_code, assigned_to, created_by,
+         origin_area_id, origin_area_name, business_area_id, priority_code, assigned_to, created_by,
          status_id, sla_policy_id)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         pendingFolio,
         data.title,
@@ -77,6 +79,7 @@ export async function createTicket(data: {
         data.origin_floor_name || null,
         data.origin_area_id || null,
         data.origin_area_name || null,
+        data.business_area_id,
         data.priority_code || 'P3',
         null,
         data.created_by || null,
@@ -89,6 +92,11 @@ export async function createTicket(data: {
     const year = new Date().getFullYear();
     const folio = buildFolio(year, ticketId);
     await connection.query('UPDATE tickets SET folio = ? WHERE id = ?', [folio, ticketId]);
+
+    if (data.categories && data.categories.length) {
+      const values = data.categories.map((item) => [ticketId, item.category_id, item.subcategory_id || null]);
+      await connection.query('INSERT INTO ticket_category_links (ticket_id, category_id, subcategory_id) VALUES ?', [values]);
+    }
     await connection.query('INSERT INTO ticket_status_history (ticket_id, from_status_id, to_status_id, changed_by, comment) VALUES (?,?,?,?,?)', [ticketId, null, statusId, data.created_by || null, 'Ticket creado']);
     await connection.commit();
 

@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
 import NewTicket from './pages/NewTicket';
+import AreaTeams from './pages/AreaTeams';
 import api from './services/api';
 import { useTheme } from './hooks/useTheme';
 import './style.css';
@@ -68,6 +69,7 @@ function App() {
           <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>
           <NavLink to="/tickets" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">◇</span><span className="nav-label">Tickets</span></NavLink>
           <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nueva solicitud</span></NavLink>
+          {profile.role === 'administrator' && <NavLink to="/settings/area-teams" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">♙</span><span className="nav-label">Equipos por área</span></NavLink>}
         </nav>
         <div className="sidebar-footer">
           <button
@@ -102,6 +104,7 @@ function App() {
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/tickets/new" element={<NewTicket />} />
           <Route path="/tickets/:id" element={<TicketDetail />} />
+          <Route path="/settings/area-teams" element={<AreaTeams />} />
         </Routes>
       </main>
     </div>

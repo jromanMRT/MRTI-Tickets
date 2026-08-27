@@ -5,13 +5,14 @@ import { requireAuth } from '../middlewares/auth';
 import { saveAttachment } from '../services/storage';
 import pool from '../config/db';
 import { logAudit } from '../services/audit';
+import { requireTicketAreaAccess } from '../services/ticketAreaAccess';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const router = Router({ mergeParams: true });
 
 const allowed = (process.env.ATTACHMENTS_ALLOW || 'image/jpeg,image/png,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip').split(',');
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT id, filename, mime_type, size_bytes, created_at FROM ticket_attachments WHERE ticket_id = ? ORDER BY created_at DESC',
@@ -24,7 +25,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/', requireAuth, upload.single('file'), async (req, res) => {
+router.post('/', requireAuth, requireTicketAreaAccess, upload.single('file'), async (req, res) => {
   const ticketId = Number(req.params.id);
   if (!req.file) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'File required' } });
   if (!allowed.includes(req.file.mimetype)) return res.status(400).json({ success: false, error: { code: 'INVALID_FILE', message: 'Tipo de archivo no permitido' } });
@@ -44,10 +45,10 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
 });
 
 // Download attachment
-router.get('/:attachmentId', requireAuth, async (req, res) => {
+router.get('/:attachmentId', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const attachmentId = Number(req.params.attachmentId);
   try {
-    const [rows]: any = await pool.query('SELECT filename, storage_path, mime_type FROM ticket_attachments WHERE id = ? LIMIT 1', [attachmentId]);
+    const [rows]: any = await pool.query('SELECT filename, storage_path, mime_type FROM ticket_attachments WHERE id = ? AND ticket_id = ? LIMIT 1', [attachmentId, Number(req.params.id)]);
     if (!rows || rows.length === 0) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Attachment not found' } });
     const att = rows[0];
     // Send file
@@ -66,12 +67,12 @@ router.get('/:attachmentId', requireAuth, async (req, res) => {
 });
 
 // Delete attachment (only uploader or admin)
-router.delete('/:attachmentId', requireAuth, async (req, res) => {
+router.delete('/:attachmentId', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const attachmentId = Number(req.params.attachmentId);
   const userId = req.user?.id || null;
   const roles: string[] = req.user?.roles || [];
   try {
-    const [rows]: any = await pool.query('SELECT uploaded_by, storage_path FROM ticket_attachments WHERE id = ? LIMIT 1', [attachmentId]);
+    const [rows]: any = await pool.query('SELECT uploaded_by, storage_path FROM ticket_attachments WHERE id = ? AND ticket_id = ? LIMIT 1', [attachmentId, Number(req.params.id)]);
     if (!rows || rows.length === 0) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Attachment not found' } });
     const att = rows[0];
     if (!(roles.includes('Administrador') || att.uploaded_by === userId)) return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not allowed to delete' } });

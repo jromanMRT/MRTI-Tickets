@@ -16,7 +16,7 @@ INSERT IGNORE INTO ticket_statuses (code, name, is_system, sort_order) VALUES
 
 -- Seed priorities
 INSERT IGNORE INTO ticket_priorities (code, name, level) VALUES
-('P1','Critica',1),
+('P1','Crítica',1),
 ('P2','Alta',2),
 ('P3','Media',3),
 ('P4','Baja',4);

@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import pool from '../config/db';
 import { requireAuth } from '../middlewares/auth';
+import { requireTicketAreaAccess } from '../services/ticketAreaAccess';
 
 const router = Router({ mergeParams: true });
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const ticketId = Number(req.params.id);
   try {
     const [statusRows]: any = await pool.query(

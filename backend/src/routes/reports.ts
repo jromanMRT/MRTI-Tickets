@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import pool from '../config/db';
 import { requireAuth, requirePermission } from '../middlewares/auth';
+import { getTicketAreaScope } from '../services/ticketAreaAccess';
 
 const router = Router();
 
 // Simple tickets report export
 router.get('/tickets', requireAuth, requirePermission('Consultar reportes'), async (req, res) => {
   const { from, to, format } = req.query as any;
-  const params: any[] = [];
-  let where = 'WHERE 1=1';
+  const areaScope = await getTicketAreaScope(req.user);
+  const params: any[] = [...areaScope.params];
+  let where = `WHERE t.deleted_at IS NULL AND ${areaScope.sql}`;
   if (from) {
     where += ' AND t.created_at >= ?';
     params.push(from);
@@ -18,7 +20,9 @@ router.get('/tickets', requireAuth, requirePermission('Consultar reportes'), asy
     params.push(to);
   }
 
-  const sql = `SELECT t.id, t.folio, t.title, t.requester_name, t.requester_email, t.priority_code, s.code as status_code, t.created_at, t.updated_at FROM tickets t LEFT JOIN ticket_statuses s ON t.status_id = s.id ${where} ORDER BY t.created_at DESC`;
+  const sql = `SELECT t.id, t.folio, t.title, t.requester_name, t.requester_email, t.priority_code, s.code as status_code, t.created_at, t.updated_at
+    FROM tickets t LEFT JOIN ticket_statuses s ON t.status_id = s.id
+    LEFT JOIN ticket_categories c ON c.id = t.category_id ${where} ORDER BY t.created_at DESC`;
   try {
     const [rows]: any = await pool.query(sql, params);
     if (format === 'csv') {

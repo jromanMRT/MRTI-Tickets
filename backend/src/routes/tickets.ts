@@ -4,6 +4,7 @@ import { requireAuth } from '../middlewares/auth';
 import { createTicket } from '../services/ticketService';
 import { logAudit } from '../services/audit';
 import { getTicketContext } from '../integrations/coreClient';
+import { getTicketAreaScope, requireTicketAreaAccess, validateTicketClassification } from '../services/ticketAreaAccess';
 
 const router = Router();
 
@@ -26,8 +27,9 @@ router.get('/', requireAuth, async (req, res) => {
   const page = Math.max(Number(req.query.page || 1), 1);
   const limit = Math.min(Math.max(Number(req.query.limit || 25), 1), 100);
   const offset = (page - 1) * limit;
-  const clauses = ['t.deleted_at IS NULL'];
-  const params: Array<string | number> = [];
+  const areaScope = await getTicketAreaScope(req.user);
+  const clauses = ['t.deleted_at IS NULL', areaScope.sql];
+  const params: Array<string | number> = [...areaScope.params];
 
   if (req.query.status) {
     clauses.push('s.code = ?');
@@ -38,16 +40,38 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(String(req.query.priority));
   }
   if (req.query.business_area_id) {
-    clauses.push('c.business_area_id = ?');
+    clauses.push('COALESCE(t.business_area_id, c.business_area_id) = ?');
     params.push(String(req.query.business_area_id));
   }
+  if (req.query.assigned_to) {
+    clauses.push('t.assigned_to = ?');
+    params.push(String(req.query.assigned_to));
+  }
+  const terminalStatuses = "'RESOLVED','CLOSED','CANCELLED'";
+  const scope = String(req.query.scope || '');
+  if (scope === 'open') clauses.push(`s.code NOT IN (${terminalStatuses})`);
+  if (scope === 'mine') {
+    clauses.push(`t.assigned_to = ? AND s.code NOT IN (${terminalStatuses})`);
+    params.push(String(req.user?.id || ''));
+  }
+  if (scope === 'unassigned') clauses.push(`t.assigned_to IS NULL AND s.code NOT IN (${terminalStatuses})`);
+  if (scope === 'overdue') clauses.push(`sp.id IS NOT NULL AND s.code NOT IN (${terminalStatuses}) AND DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) < NOW()`);
+  if (scope === 'at-risk') clauses.push(`sp.id IS NOT NULL AND s.code NOT IN (${terminalStatuses}) AND DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) >= NOW() AND DATE_ADD(t.created_at, INTERVAL FLOOR(sp.resolution_minutes * .8) MINUTE) <= NOW()`);
   if (req.query.q) {
-    clauses.push('(t.folio LIKE ? OR t.title LIKE ? OR t.origin_area_name LIKE ? OR t.affected_device_internal_id LIKE ?)');
+    clauses.push('(t.folio LIKE ? OR t.title LIKE ? OR t.requester_name LIKE ? OR t.origin_area_name LIKE ? OR t.affected_device_internal_id LIKE ?)');
     const search = `%${String(req.query.q).trim()}%`;
-    params.push(search, search, search, search);
+    params.push(search, search, search, search, search);
   }
 
   const where = `WHERE ${clauses.join(' AND ')}`;
+  const sortOptions: Record<string, string> = {
+    newest: 't.created_at DESC',
+    updated: 't.updated_at DESC',
+    oldest: 't.created_at ASC',
+    priority: "FIELD(t.priority_code, 'P1','P2','P3','P4'), t.created_at ASC",
+    sla: "COALESCE(DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE), '9999-12-31') ASC",
+  };
+  const orderBy = sortOptions[String(req.query.sort || '')] || sortOptions.updated;
   try {
     const [rows] = await pool.query(
       `SELECT t.id, t.folio, t.title, t.priority_code, t.assigned_to,
@@ -56,24 +80,37 @@ router.get('/', requireAuth, async (req, res) => {
               t.affected_device_name,
               s.code AS status_code, s.name AS status_name,
               p.name AS priority_name,
-              c.business_area_id, b.name AS business_area_name
+              COALESCE(t.business_area_id, c.business_area_id) AS business_area_id, b.name AS business_area_name,
+              DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) AS sla_deadline,
+              CASE
+                WHEN s.code IN (${terminalStatuses}) THEN 'completed'
+                WHEN sp.id IS NULL THEN 'none'
+                WHEN DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) < NOW() THEN 'overdue'
+                WHEN DATE_ADD(t.created_at, INTERVAL FLOOR(sp.resolution_minutes * .8) MINUTE) <= NOW() THEN 'at_risk'
+                ELSE 'on_track'
+              END AS sla_state,
+              (SELECT COUNT(*) FROM ticket_comments tc WHERE tc.ticket_id = t.id) AS comment_count,
+              (SELECT COUNT(*) FROM ticket_attachments ta WHERE ta.ticket_id = t.id) AS attachment_count
          FROM tickets t
          JOIN ticket_statuses s ON s.id = t.status_id
          LEFT JOIN ticket_priorities p ON p.code = t.priority_code
          LEFT JOIN ticket_categories c ON c.id = t.category_id
-         LEFT JOIN business_areas b ON b.id = c.business_area_id
+         LEFT JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)
+         LEFT JOIN sla_policies sp ON sp.id = t.sla_policy_id
          ${where}
-        ORDER BY t.created_at DESC LIMIT ? OFFSET ?`,
+        ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
     const [[countRow]]: any = await pool.query(
       `SELECT COUNT(*) AS total FROM tickets t
        JOIN ticket_statuses s ON s.id = t.status_id
        LEFT JOIN ticket_categories c ON c.id = t.category_id
+       LEFT JOIN sla_policies sp ON sp.id = t.sla_policy_id
        ${where}`,
       params
     );
-    res.json({ success: true, data: { items: rows, page, limit, total: Number(countRow.total) } });
+    const total = Number(countRow.total);
+    res.json({ success: true, data: { items: rows, page, limit, total, totalPages: Math.max(Math.ceil(total / limit), 1) } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al consultar tickets' } });
@@ -81,11 +118,21 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 router.post('/', requireAuth, async (req, res) => {
-  const { title, description, category_id, priority_code } = req.body;
+  const { title, description, business_area_id, category_id, subcategory_id, priority_code } = req.body;
   if (!String(title || '').trim()) {
     return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'El título es requerido' } });
   }
+  const areaId = Number(business_area_id);
+  const categoryId = Number(category_id);
+  const subcategoryId = subcategory_id ? Number(subcategory_id) : null;
+  if (!areaId || !categoryId) {
+    return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Selecciona el área y la categoría del ticket' } });
+  }
   try {
+    const classification = await validateTicketClassification(areaId, categoryId, subcategoryId);
+    if (!classification.valid) {
+      return res.status(400).json({ success: false, error: { code: classification.code, message: classification.message } });
+    }
     const context = await getTicketContext(bearerToken(req));
     const requestedDeviceId = String(req.body.affected_device_id || req.body.related_device_id || context?.primary_device?.id || '').trim() || null;
     const affectedDevice = requestedDeviceId
@@ -99,7 +146,10 @@ router.post('/', requireAuth, async (req, res) => {
     const ticket = await createTicket({
       title: String(title).trim(),
       description: String(description || '').trim() || null,
-      category_id: category_id ? Number(category_id) : null,
+      business_area_id: areaId,
+      category_id: categoryId,
+      subcategory_id: subcategoryId,
+      categories: [{ category_id: categoryId, subcategory_id: subcategoryId }],
       related_device_id: affectedDevice?.id || null,
       asset_number: affectedDevice?.inventory_tag || affectedDevice?.internal_id || null,
       priority_code: priority_code || 'P3',
@@ -128,29 +178,40 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', requireAuth, requireTicketAreaAccess, async (req, res) => {
   try {
     const [rows]: any = await pool.query(
       `SELECT t.*, s.code AS status_code, s.name AS status_name,
               c.name AS category_name, p.name AS priority_name,
-              c.business_area_id, b.name AS business_area_name
+              COALESCE(t.business_area_id, c.business_area_id) AS business_area_id, b.name AS business_area_name
          FROM tickets t
          JOIN ticket_statuses s ON s.id = t.status_id
          LEFT JOIN ticket_categories c ON c.id = t.category_id
          LEFT JOIN ticket_priorities p ON p.code = t.priority_code
-         LEFT JOIN business_areas b ON b.id = c.business_area_id
+         LEFT JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)
         WHERE t.id = ? AND t.deleted_at IS NULL LIMIT 1`,
       [Number(req.params.id)]
     );
     if (!rows.length) return res.status(404).json({ success: false, error: { code: 'TICKET_NOT_FOUND', message: 'No se encontró el ticket' } });
-    res.json({ success: true, data: rows[0] });
+    const [categoryLinks]: any = await pool.query(
+      `SELECT l.category_id, c.name AS category_name, c.business_area_id, b.name AS business_area_name,
+              l.subcategory_id, sc.name AS subcategory_name
+         FROM ticket_category_links l
+         JOIN ticket_categories c ON c.id = l.category_id
+         LEFT JOIN business_areas b ON b.id = c.business_area_id
+         LEFT JOIN ticket_subcategories sc ON sc.id = l.subcategory_id
+        WHERE l.ticket_id = ?
+        ORDER BY b.sort_order, c.sort_order`,
+      [Number(req.params.id)]
+    );
+    res.json({ success: true, data: { ...rows[0], categories: categoryLinks } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al consultar el ticket' } });
   }
 });
 
-router.patch('/:id/status', requireAuth, async (req, res) => {
+router.patch('/:id/status', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const ticketId = Number(req.params.id);
   const { to_status_code, comment } = req.body;
   if (!to_status_code) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Selecciona un estado' } });

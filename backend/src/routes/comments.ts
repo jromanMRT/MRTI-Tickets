@@ -2,10 +2,11 @@ import { Router } from 'express';
 import pool from '../config/db';
 import { requireAuth } from '../middlewares/auth';
 import { logAudit } from '../services/audit';
+import { requireTicketAreaAccess } from '../services/ticketAreaAccess';
 
 const router = Router({ mergeParams: true });
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const ticketId = Number(req.params.id);
   try {
     const [rows] = await pool.query('SELECT id, author_id, author_name, is_private, content, edited_at, created_at FROM ticket_comments WHERE ticket_id = ? ORDER BY created_at', [ticketId]);
@@ -17,7 +18,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const ticketId = Number(req.params.id);
   const { content, is_private } = req.body;
   if (!content) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Content required' } });

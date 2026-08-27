@@ -60,7 +60,7 @@ docker compose up --build
 ```
 
 En el servidor MRTI, Nginx publica el frontend en `/tickets/` y la API bajo
-`/tickets-api/`. Tickets reutiliza las cuentas y sesiones de MRTI Infra.
+`/tickets-api/`. Tickets reutiliza las cuentas y sesiones de MRTI Core.
 Los adjuntos y la base de datos se conservan en volúmenes Docker.
 
 ## Migraciones
@@ -71,7 +71,7 @@ npm run migrate
 ```
 
 La migración `002_user_uuid_support.sql` adapta los identificadores de usuario
-al formato UUID utilizado por MRTI Infra y crea las políticas SLA iniciales.
+al UUID estable que ahora administra MRTI Core y crea las políticas SLA iniciales.
 
 ## Endpoints principales
 
@@ -104,6 +104,32 @@ al formato UUID utilizado por MRTI Infra y crea las políticas SLA iniciales.
 
 - Ingesta de eventos en `POST /api/agent/events`.
 - Correlación de eventos por `device_id + event_type + component`.
+
+## Operación empresarial
+
+- El centro operativo muestra trabajo activo, edad de la cola, cumplimiento y
+  riesgo SLA, demanda por área, carga por responsable y trabajo recomendado.
+- La bandeja ofrece colas compatibles por URL: `scope=open`, `mine`,
+  `unassigned`, `overdue` y `at-risk`; admite filtros, orden y paginación.
+- Cada fila expone prioridad, responsable, actividad y estado SLA. La ficha del
+  ticket muestra tiempo consumido, restante y fecha de compromiso.
+- Los indicadores se calculan en tiempo real desde Tickets; usuarios continúan
+  siendo propiedad de Core y ubicación/equipo se consultan mediante sus APIs.
+
+## Seguridad y clasificación por área
+
+- Cada solicitud requiere un destino `Área → Categoría → Detalle`; las
+  categorías y detalles se validan en el backend para impedir combinaciones
+  manipuladas desde el navegador.
+- El área queda guardada directamente en el ticket. Los integrantes sólo ven,
+  comentan, asignan y cambian el estado de tickets pertenecientes a sus áreas.
+- Los administradores globales conservan visibilidad completa para configurar,
+  auditar y recuperar la operación.
+- En **Equipos por área**, un administrador asigna usuarios de Core con acceso
+  al módulo Tickets a TI, Compras, Pagos o RH. Un área sin integrantes sólo es
+  visible para administradores globales.
+- El autoservicio de Core conserva acceso a las solicitudes propias sin otorgar
+  acceso al módulo operativo.
 
 ## Datos semilla
 

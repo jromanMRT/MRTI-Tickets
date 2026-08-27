@@ -58,7 +58,9 @@ router.post('/', authAgentOrUser, async (req, res) => {
     const title = `Alerta agente: ${eventType} - equipo ${deviceId}`;
     const description = `${deviceSummary}\nMensaje: ${message}\nComponente: ${component}\nSeveridad: ${severity}\nPayload: ${JSON.stringify(payload)}`;
 
-    const ticket = await createTicket({ title, description, related_device_id: String(deviceId), priority_code: priority, created_by: null });
+    const [[tiArea]]: any = await pool.query("SELECT id FROM business_areas WHERE code = 'ti' AND active = 1 LIMIT 1");
+    if (!tiArea) throw new Error('El área TI no está configurada');
+    const ticket = await createTicket({ title, description, business_area_id: tiArea.id, related_device_id: String(deviceId), priority_code: priority, created_by: null });
 
     if (correlation) {
       await pool.query('UPDATE automatic_event_correlations SET ticket_id = ?, occurrences = occurrences + 1, last_seen = NOW() WHERE id = ?', [ticket.id, correlation.id]);

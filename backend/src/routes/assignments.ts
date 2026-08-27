@@ -2,10 +2,11 @@ import { Router } from 'express';
 import pool from '../config/db';
 import { requireAuth, requirePermission } from '../middlewares/auth';
 import { logAudit } from '../services/audit';
+import { requireTicketAreaAccess } from '../services/ticketAreaAccess';
 
 const router = Router({ mergeParams: true });
 
-router.post('/', requireAuth, requirePermission('Asignar tickets'), async (req, res) => {
+router.post('/', requireAuth, requireTicketAreaAccess, requirePermission('Asignar tickets'), async (req, res) => {
   const ticketId = Number(req.params.id);
   const requestedAssignee = req.body.assigned_to;
   const assignedTo = requestedAssignee === 'me' ? req.user?.id : requestedAssignee;
@@ -21,14 +22,14 @@ router.post('/', requireAuth, requirePermission('Asignar tickets'), async (req, 
   try {
     const [[area]]: any = await pool.query(
       `SELECT b.id, b.name FROM tickets t
-         JOIN ticket_categories c ON c.id = t.category_id
-         JOIN business_areas b ON b.id = c.business_area_id
+         LEFT JOIN ticket_categories c ON c.id = t.category_id
+         JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)
         WHERE t.id = ?`,
       [ticketId]
     );
     if (area) {
       const [members]: any = await pool.query('SELECT user_id FROM business_area_members WHERE business_area_id = ?', [area.id]);
-      if (members.length && !members.some((row: any) => row.user_id === assignedTo)) {
+      if (!members.some((row: any) => row.user_id === assignedTo)) {
         return res.status(400).json({ success: false, error: { code: 'NOT_AREA_MEMBER', message: `Esa persona no pertenece al equipo de ${area.name}` } });
       }
     }

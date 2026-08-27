@@ -22,13 +22,8 @@ router.get('/', requireAuth, async (req, res) => {
         'SELECT user_id FROM business_area_members WHERE business_area_id = ?',
         [businessAreaId]
       );
-      // Un área sin miembros registrados todavía no restringe nada — se
-      // muestra la lista completa (mismo criterio de "expandir antes de
-      // restringir" que el resto de esta migración).
-      if (members.length) {
-        const memberIds = new Set(members.map((row: any) => row.user_id));
-        assignees = assignees.filter((person: any) => memberIds.has(person.id));
-      }
+      const memberIds = new Set(members.map((row: any) => row.user_id));
+      assignees = assignees.filter((person: any) => memberIds.has(person.id));
     }
 
     res.json({ success: true, data: assignees });

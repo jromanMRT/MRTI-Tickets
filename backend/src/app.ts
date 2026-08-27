@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import healthRouter from './routes/health';
 import ticketsRouter from './routes/tickets';
 import categoriesRouter from './routes/categories';
+import subcategoriesRouter from './routes/subcategories';
 import prioritiesRouter from './routes/priorities';
 import statusesRouter from './routes/statuses';
 import commentsRouter from './routes/comments';
@@ -42,6 +43,7 @@ export function createApp() {
   app.use('/api/tickets-self', ticketsSelfRouter);
   app.use('/api/assignees', assigneesRouter);
   app.use('/api/categories', categoriesRouter);
+  app.use('/api/subcategories', subcategoriesRouter);
   app.use('/api/business-areas', businessAreasRouter);
   app.use('/api/audit-events', auditEventsRouter);
   app.use('/api/priorities', prioritiesRouter);

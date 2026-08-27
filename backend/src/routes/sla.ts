@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../config/db';
 import { requireAuth, requirePermission } from '../middlewares/auth';
 import { getSlaStatusForTicket } from '../services/slaService';
+import { requireTicketAreaAccess } from '../services/ticketAreaAccess';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.post('/sla/policies', requireAuth, requirePermission('Administrar SLA'), 
 });
 
 // Get SLA status for a ticket
-router.get('/tickets/:id/sla-status', requireAuth, async (req, res) => {
+router.get('/tickets/:id/sla-status', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const ticketId = Number(req.params.id);
   try {
     const status = await getSlaStatusForTicket(ticketId);
