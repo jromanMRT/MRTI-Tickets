@@ -4,7 +4,6 @@ import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
 import NewTicket from './pages/NewTicket';
-import AreaTeams from './pages/AreaTeams';
 import api from './services/api';
 import { useTheme } from './hooks/useTheme';
 import './style.css';
@@ -79,7 +78,6 @@ function App() {
           <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>
           <NavLink to="/tickets" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">◇</span><span className="nav-label">Tickets</span></NavLink>
           <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nuevo ticket</span></NavLink>
-          {profile.role === 'administrator' && <NavLink to="/settings/area-teams" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">♙</span><span className="nav-label">Equipos por área</span></NavLink>}
         </nav>
         <div className="module-switcher">
           <span className="module-switcher-label">Cambiar módulo</span>
@@ -119,7 +117,7 @@ function App() {
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/tickets/new" element={<NewTicket />} />
           <Route path="/tickets/:id" element={<TicketDetail />} />
-          <Route path="/settings/area-teams" element={<AreaTeams />} />
+          <Route path="/settings/area-teams" element={<div className="page-stack narrow"><section className="panel empty-state"><h1>Equipos de atención</h1><p>Esta configuración se trasladó al Centro de control de Core.</p><a className="button" href="/">Abrir Core</a></section></div>} />
         </Routes>
       </main>
     </div>

@@ -5,6 +5,7 @@ import { getTicketContext } from '../integrations/coreClient';
 import { createTicket } from '../services/ticketService';
 import { logAudit } from '../services/audit';
 import { validateTicketClassification } from '../services/ticketAreaAccess';
+import { listTeamTicketNotifications } from '../services/teamNotifications';
 
 const router = Router();
 
@@ -68,6 +69,19 @@ router.get('/me', requireCoreAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al consultar tus tickets' } });
+  }
+});
+
+router.get('/team-notifications', requireCoreAuth, async (req, res) => {
+  const userId = String(req.user?.id || '');
+  if (!userId) {
+    return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token missing' } });
+  }
+  try {
+    res.json({ success: true, data: await listTeamTicketNotifications(userId) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al consultar las novedades de tus equipos' } });
   }
 });
 
