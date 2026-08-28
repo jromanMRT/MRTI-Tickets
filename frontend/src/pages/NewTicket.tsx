@@ -65,7 +65,7 @@ export default function NewTicket() {
 
   return (
     <div className="page-stack narrow">
-      <div className="page-header"><div><p className="eyebrow">Nueva solicitud</p><h1>Crear ticket</h1></div><Link to="/tickets">Cancelar</Link></div>
+      <div className="page-header"><div><p className="eyebrow">Nuevo ticket</p><h1>Crear ticket</h1></div><Link to="/tickets">Cancelar</Link></div>
       <form className="panel form-grid" onSubmit={submit}>
         {context?.location ? <section className="ticket-context full">
           <div><small>Ubicación detectada</small><strong>{context.location.site_name} · {context.location.building_name} · {context.location.floor_name} · {context.location.area_name}</strong></div>
@@ -74,7 +74,7 @@ export default function NewTicket() {
         <label className="full">Título<input name="title" required maxLength={255} placeholder="Describe brevemente el problema" /></label>
         <label className="full">Descripción<textarea name="description" rows={7} placeholder="Incluye síntomas, ubicación y cualquier dato útil" /></label>
         <div className="full category-picker">
-          <small className="category-picker-label">Destino de la solicitud</small>
+          <small className="category-picker-label">Destino del ticket</small>
           <div className="category-row">
             <label>Área<select required value={areaId} onChange={(event) => { setAreaId(event.target.value); setCategoryId(''); setSubcategoryId(''); }}><option value="">Seleccionar área</option>{areas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}</select></label>
             <label>Categoría<select required value={categoryId} disabled={!areaId} onChange={(event) => { setCategoryId(event.target.value); setSubcategoryId(''); }}><option value="">Seleccionar categoría</option>{categoriesForArea(areaId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

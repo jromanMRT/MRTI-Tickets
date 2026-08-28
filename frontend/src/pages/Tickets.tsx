@@ -69,7 +69,7 @@ function Tickets() {
   return (
     <div className="page-stack">
       <div className="page-header enterprise-header">
-        <div><p className="eyebrow">Mesa de servicio · bandeja operativa</p><h1>Tickets</h1><p className="subtitle">{pageData.total} solicitudes en esta vista · ordenadas para facilitar la atención.</p></div>
+        <div><p className="eyebrow">Mesa de servicio · bandeja operativa</p><h1>Tickets</h1><p className="subtitle">{pageData.total} tickets en esta vista · ordenados para facilitar la atención.</p></div>
         <Link className="button" to="/tickets/new">Crear ticket</Link>
       </div>
 
@@ -89,11 +89,11 @@ function Tickets() {
 
       <div className="panel table-wrap enterprise-table-wrap">
         <div className="table-toolbar"><span><strong>{pageData.total}</strong> resultados</span><small>Página {pageData.page} de {pageData.totalPages}</small></div>
-        {loading ? <p className="muted loading-row">Cargando solicitudes…</p> : error ? <p className="error loading-row">{error}</p> : pageData.items.length === 0 ? (
+        {loading ? <p className="muted loading-row">Cargando tickets…</p> : error ? <p className="error loading-row">{error}</p> : pageData.items.length === 0 ? (
           <div className="empty-state"><h2>No hay tickets en esta cola</h2><p>Prueba otra vista o elimina algunos filtros.</p>{activeFilters > 0 && <button className="button secondary" type="button" onClick={clearFilters}>Limpiar filtros</button>}</div>
         ) : (
           <table className="table enterprise-table">
-            <thead><tr><th>Solicitud</th><th>Área / solicitante</th><th>Estado</th><th>SLA</th><th>Responsable</th><th>Actividad</th></tr></thead>
+            <thead><tr><th>Ticket</th><th>Área / solicitante</th><th>Estado</th><th>SLA</th><th>Responsable</th><th>Actividad</th></tr></thead>
             <tbody>{pageData.items.map((ticket) => (
               <tr key={ticket.id}>
                 <td className="ticket-cell"><div><span className={`priority priority-${ticket.priority_code?.toLowerCase()}`}>{ticket.priority_code}</span><Link className="table-link" to={`/tickets/${ticket.id}`}>{ticket.folio}</Link></div><strong>{ticket.title}</strong><small>{ticket.origin_area_name || ticket.origin_site_name || 'Sin ubicación'}{ticket.affected_device_internal_id ? ` · ${ticket.affected_device_internal_id}` : ''}</small></td>

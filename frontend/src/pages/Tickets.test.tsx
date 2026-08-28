@@ -8,5 +8,5 @@ test('renders tickets heading', () => {
       <Tickets />
     </BrowserRouter>
   );
-  expect(screen.getByText(/Tickets/i)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Tickets' })).toBeInTheDocument();
 });

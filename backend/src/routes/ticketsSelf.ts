@@ -87,7 +87,7 @@ router.post('/', requireCoreAuth, async (req, res) => {
     return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'La descripción no puede exceder 10,000 caracteres' } });
   }
   if (!areaId || !categoryId) {
-    return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Selecciona el área y la categoría de la solicitud' } });
+    return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Selecciona el área y la categoría del ticket' } });
   }
   try {
     const classification = await validateTicketClassification(areaId, categoryId, subcategoryId);
@@ -124,10 +124,10 @@ router.post('/', requireCoreAuth, async (req, res) => {
       created_by: userId,
     });
     await logAudit(userId, req.user?.name || req.user?.full_name || null, 'ticket.self.create', 'ticket', ticket.id, null, ticket);
-    res.status(201).json({ success: true, data: ticket, message: 'Solicitud enviada correctamente' });
+    res.status(201).json({ success: true, data: ticket, message: 'Ticket enviado correctamente' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al crear la solicitud' } });
+    res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al crear el ticket' } });
   }
 });
 

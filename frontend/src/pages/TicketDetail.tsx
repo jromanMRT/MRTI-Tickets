@@ -82,7 +82,7 @@ export default function TicketDetail() {
 
   async function assignToMe() {
     setBusy('assign');
-    try { await api.post(`/tickets/${id}/assign`, { assigned_to: 'me', note: 'Asignación desde MRTI Tickets' }); await load(); }
+    try { await api.post(`/tickets/${id}/assign`, { assigned_to: 'me', note: 'Asignación desde MRTI-Tickets' }); await load(); }
     catch (requestError: any) { setError(requestError.response?.data?.error?.message || 'No tienes permiso para asignar este ticket'); }
     finally { setBusy(''); }
   }
@@ -92,7 +92,7 @@ export default function TicketDetail() {
     const form = event.currentTarget; const data = new FormData(form);
     const assignee = assignees.find((item) => item.id === data.get('assignee'));
     if (!assignee) { setBusy(''); return; }
-    try { await api.post(`/tickets/${id}/assign`, { assigned_to: assignee.id, assigned_to_name: assignee.full_name, note: 'Asignación desde MRTI Tickets' }); await load(); }
+    try { await api.post(`/tickets/${id}/assign`, { assigned_to: assignee.id, assigned_to_name: assignee.full_name, note: 'Asignación desde MRTI-Tickets' }); await load(); }
     catch (requestError: any) { setError(requestError.response?.data?.error?.message || 'No tienes permiso para asignar este ticket'); }
     finally { setBusy(''); }
   }

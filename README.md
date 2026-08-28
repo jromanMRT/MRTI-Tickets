@@ -118,7 +118,7 @@ al UUID estable que ahora administra MRTI Core y crea las políticas SLA inicial
 
 ## Seguridad y clasificación por área
 
-- Cada solicitud requiere un destino `Área → Categoría → Detalle`; las
+- Cada ticket requiere un destino `Área → Categoría → Detalle`; las
   categorías y detalles se validan en el backend para impedir combinaciones
   manipuladas desde el navegador.
 - El área queda guardada directamente en el ticket. Los integrantes sólo ven,
@@ -128,7 +128,7 @@ al UUID estable que ahora administra MRTI Core y crea las políticas SLA inicial
 - En **Equipos por área**, un administrador asigna usuarios de Core con acceso
   al módulo Tickets a TI, Compras, Pagos o RH. Un área sin integrantes sólo es
   visible para administradores globales.
-- El autoservicio de Core conserva acceso a las solicitudes propias sin otorgar
+- El autoservicio de Core conserva acceso a los tickets propios sin otorgar
   acceso al módulo operativo.
 
 ## Datos semilla

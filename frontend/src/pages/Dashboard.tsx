@@ -61,7 +61,7 @@ function Dashboard() {
         <Link className="executive-card primary" to="/tickets?scope=open"><span>Trabajo activo</span><strong>{summary.open}</strong><small>{summary.new} nuevos · {summary.inProgress} en proceso · {summary.waiting} en espera</small></Link>
         <Link className={`executive-card ${summary.overdue ? 'danger' : ''}`} to="/tickets?scope=overdue"><span>SLA vencido</span><strong>{summary.overdue}</strong><small>{summary.overdue ? 'Requiere recuperación inmediata' : 'Sin incumplimientos activos'}</small></Link>
         <Link className={`executive-card ${summary.atRisk ? 'warning' : ''}`} to="/tickets?scope=at-risk"><span>Próximos a vencer</span><strong>{summary.atRisk}</strong><small>80% o más del tiempo consumido</small></Link>
-        <div className="executive-card"><span>Edad promedio abierta</span><strong>{summary.averageOpenAgeHours}<sup> h</sup></strong><small>{summary.resolved + summary.closed} solicitudes terminadas</small></div>
+        <div className="executive-card"><span>Edad promedio abierta</span><strong>{summary.averageOpenAgeHours}<sup> h</sup></strong><small>{summary.resolved + summary.closed} tickets terminados</small></div>
       </section>
 
       <section>
@@ -116,7 +116,7 @@ function Dashboard() {
             <span className={`sla-pill sla-${ticket.sla_state}`}>{ticket.sla_state === 'overdue' ? 'SLA vencido' : ticket.sla_state === 'at_risk' ? 'En riesgo' : ticket.sla_state === 'on_track' ? 'En tiempo' : 'Sin SLA'}</span>
             <span className={`status status-${ticket.status_code.toLowerCase()}`}>{ticket.status_name}</span>
           </Link>
-        ))}</div> : <div className="empty-state compact"><h2>La bandeja está al día</h2><p>No existen solicitudes activas pendientes.</p></div>}
+        ))}</div> : <div className="empty-state compact"><h2>La bandeja está al día</h2><p>No existen tickets activos pendientes.</p></div>}
       </section>
     </div>
   );
