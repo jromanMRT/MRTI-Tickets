@@ -107,6 +107,12 @@ a { color: rgb(var(--gold-deep)); }
 .app-shell.sidebar-collapsed .sidebar nav a span.nav-label { display: none; }
 .sidebar nav a:hover, .sidebar nav a.active { color: rgb(var(--ink)); background: rgb(var(--gold) / .16); }
 .sidebar nav a.active { box-shadow: inset 2px 0 rgb(var(--gold)); }
+.module-switcher { display: grid; gap: 4px; width: 100%; margin: 14px 0; padding-top: 14px; border-top: 1px solid rgb(var(--line)); }
+.module-switcher-label { padding: 0 12px 5px; color: rgb(var(--ink-faint)); font-size: .62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.module-switcher a { display: flex; min-height: 38px; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 9px; color: rgb(var(--ink-faint)); text-decoration: none; font-size: .74rem; font-weight: 600; }
+.module-switcher a:hover { color: rgb(var(--ink)); background: rgb(var(--gold) / .12); }
+.app-shell.sidebar-collapsed .module-switcher-label, .app-shell.sidebar-collapsed .module-switcher .nav-label { display: none; }
+.app-shell.sidebar-collapsed .module-switcher a { justify-content: center; padding-inline: 8px; }
 .nav-icon { display: grid; width: 20px; flex: 0 0 20px; place-items: center; color: rgb(var(--gold-deep)); font-size: 1rem; }
 .sidebar-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 14px; border-top: 1px solid rgb(var(--line)); }
 .app-shell.sidebar-collapsed .sidebar-footer { flex-direction: column; }
