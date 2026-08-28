@@ -48,7 +48,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (role !== 'administrator' && !allowedModules.includes('tickets')) {
     return res.status(403).json({
       success: false,
-      error: { code: 'MODULE_FORBIDDEN', message: 'Tu área no tiene acceso a MRTI-Tickets' },
+      error: { code: 'MODULE_FORBIDDEN', message: 'Tu área no tiene acceso a MRTI Tickets' },
     });
   }
   return next();

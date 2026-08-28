@@ -62,7 +62,7 @@ function App() {
       <button className="sidebar-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación" />
       <aside className="sidebar" id="tickets-sidebar" aria-label="Navegación de Tickets">
         <div className="brand-row">
-          <div className="brand"><span className="brand-text">MRTI-Tickets</span></div>
+          <div className="brand"><span className="brand-text">MRTI Tickets</span></div>
           <a href="/">← Core</a>
         </div>
         <nav>
@@ -96,7 +96,7 @@ function App() {
       <main className="content">
         <header className="topbar">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
-          <span><strong>MRTI-Tickets</strong><small>Tickets y seguimiento</small></span>
+          <span><strong>MRTI Tickets</strong><small>Tickets y seguimiento</small></span>
           <div className="session-controls"><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span><button className="logout" onClick={() => { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_profile'); window.location.replace('/'); }}>Cerrar sesión</button></div>
         </header>
         <Routes>
