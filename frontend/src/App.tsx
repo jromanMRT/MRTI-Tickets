@@ -15,10 +15,22 @@ function App() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_tickets_sidebar_collapsed') === '1');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [applications, setApplications] = useState<Array<{ code: string; name: string; url: string }>>([]);
+  const [logoUrl, setLogoUrl] = useState('/company-logo.svg');
   const [theme, setTheme] = useTheme();
   const location = useLocation();
   let profile: { full_name?: string; role?: string } = {};
   try { profile = JSON.parse(localStorage.getItem('auth_profile') || '{}'); } catch { profile = {}; }
+  const isAdministrator = profile.role === 'administrator';
+
+  async function handleLogout() {
+    try {
+      const token = localStorage.getItem('auth_token');
+      await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: '{}' });
+    } catch { /* cierre local garantizado aunque el aviso a Core falle */ }
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_profile');
+    window.location.replace('/');
+  }
 
   useEffect(() => {
     const expired = () => setAuthenticated(false);
@@ -41,7 +53,21 @@ function App() {
       .catch(() => setApplications([]));
   }, []);
 
+  // El logo lo administra Core (Centro de control → Recursos de marca); se
+  // consulta en vivo para que un cambio ahí se refleje aquí sin tocar código.
+  useEffect(() => {
+    fetch('/api/portal/v1/brand-appearance', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then(({ data }) => { if (data?.portal_logo?.content_url) setLogoUrl(data.portal_logo.content_url); })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => setMobileMenuOpen(false), [location.pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -71,8 +97,7 @@ function App() {
       <button className="sidebar-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación" />
       <aside className="sidebar" id="tickets-sidebar" aria-label="Navegación de Tickets">
         <div className="brand-row">
-          <div className="brand"><span className="brand-text">MRTI Tickets</span></div>
-          <a href="/">← Core</a>
+          <a href="/" title="Volver al Core" className="brand"><span className="brand-mark"><img src={logoUrl} alt="" /></span><span className="brand-text"><strong>MRTI Tickets</strong><small>Volver a Mi espacio</small></span></a>
         </div>
         <nav>
           <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>
@@ -84,10 +109,17 @@ function App() {
           <a href="/" title="Mi espacio"><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Mi espacio</span></a>
           {applications.filter((application) => application.code !== 'tickets').map((application) => <a key={application.code} href={application.code === 'agent-core' ? `${application.url}#token=${encodeURIComponent(localStorage.getItem('auth_token') || '')}` : application.url} title={application.name}><span className="nav-icon" aria-hidden="true">◆</span><span className="nav-label">{application.name}</span></a>)}
         </div>
+        <div className="module-switcher">
+          <span className="module-switcher-label">Mi cuenta</span>
+          <a href="/?view=account" title="Perfil"><span className="nav-icon" aria-hidden="true">○</span><span className="nav-label">Perfil</span></a>
+          <a href="/?view=notifications" title="Notificaciones"><span className="nav-icon" aria-hidden="true">◔</span><span className="nav-label">Notificaciones</span></a>
+          {isAdministrator && <a href="/?view=brand-assets" title="Recursos de marca"><span className="nav-icon" aria-hidden="true">◆</span><span className="nav-label">Recursos de marca</span></a>}
+          {isAdministrator && <a href="/?view=control-center" title="Centro de control"><span className="nav-icon" aria-hidden="true">⚙</span><span className="nav-label">Centro de control</span></a>}
+        </div>
         <div className="sidebar-footer">
           <button
             type="button"
-            className="icon-button"
+            className="icon-button sidebar-collapse-button"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             aria-label="Cambiar tema"
@@ -104,13 +136,14 @@ function App() {
           >
             {collapsed ? '»' : '«'}
           </button>
+          <button type="button" className="icon-button sidebar-logout-button" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">↪</button>
         </div>
       </aside>
       <main className="content">
         <header className="topbar">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
           <span><strong>MRTI Tickets</strong><small>Tickets y seguimiento</small></span>
-          <div className="session-controls"><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span><button className="logout" onClick={() => { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_profile'); window.location.replace('/'); }}>Cerrar sesión</button></div>
+          <div className="session-controls"><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span><button className="logout" onClick={handleLogout}>Cerrar sesión</button></div>
         </header>
         <Routes>
           <Route path="/" element={<Dashboard />} />
