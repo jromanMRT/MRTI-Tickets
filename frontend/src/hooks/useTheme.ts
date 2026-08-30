@@ -11,6 +11,18 @@ function preferredTheme(): ThemeMode {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+async function persistSharedTheme(theme: ThemeMode) {
+  const token = window.localStorage.getItem('auth_token');
+  if (!token) return;
+  try {
+    await fetch('/api/auth/profile/preferences/theme', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ theme }),
+    });
+  } catch { /* el estado local se conserva si Core no responde */ }
+}
+
 export function useTheme(): [ThemeMode, (theme: ThemeMode) => void] {
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === 'undefined') return 'dark';
@@ -23,5 +35,18 @@ export function useTheme(): [ThemeMode, (theme: ThemeMode) => void] {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
-  return [theme, setTheme];
+  useEffect(() => {
+    const syncTheme = (event: StorageEvent) => {
+      if (event.key === 'mrti_theme' && (event.newValue === 'light' || event.newValue === 'dark')) setTheme(event.newValue);
+    };
+    window.addEventListener('storage', syncTheme);
+    return () => window.removeEventListener('storage', syncTheme);
+  }, []);
+
+  const setSharedTheme = (nextTheme: ThemeMode) => {
+    setTheme(nextTheme);
+    void persistSharedTheme(nextTheme);
+  };
+
+  return [theme, setSharedTheme];
 }

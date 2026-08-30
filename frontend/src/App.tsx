@@ -107,7 +107,7 @@ function App() {
         <div className="module-switcher">
           <span className="module-switcher-label">Cambiar módulo</span>
           <a href="/" title="Mi espacio"><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Mi espacio</span></a>
-          {applications.filter((application) => application.code !== 'tickets').map((application) => <a key={application.code} href={application.code === 'agent-core' ? `${application.url}#token=${encodeURIComponent(localStorage.getItem('auth_token') || '')}` : application.url} title={application.name}><span className="nav-icon" aria-hidden="true">◆</span><span className="nav-label">{application.name}</span></a>)}
+          {applications.filter((application) => application.code !== 'tickets').map((application) => <a key={application.code} href={application.code === 'agent-core' ? `${application.url}#token=${encodeURIComponent(localStorage.getItem('auth_token') || '')}&theme=${encodeURIComponent(localStorage.getItem('mrti_theme') || '')}` : application.url} title={application.name}><span className="nav-icon" aria-hidden="true">◆</span><span className="nav-label">{application.name}</span></a>)}
         </div>
         <div className="module-switcher">
           <span className="module-switcher-label">Mi cuenta</span>
