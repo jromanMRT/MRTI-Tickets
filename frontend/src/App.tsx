@@ -6,6 +6,7 @@ import TicketDetail from './pages/TicketDetail';
 import NewTicket from './pages/NewTicket';
 import api from './services/api';
 import { useTheme } from './hooks/useTheme';
+import { PortalNotifications } from './components/PortalNotifications';
 import './style.css';
 import './shell.css';
 
@@ -112,7 +113,6 @@ function App() {
         <div className="module-switcher">
           <span className="module-switcher-label">Mi cuenta</span>
           <a href="/?view=account" title="Perfil"><span className="nav-icon" aria-hidden="true">○</span><span className="nav-label">Perfil</span></a>
-          <a href="/?view=notifications" title="Notificaciones"><span className="nav-icon" aria-hidden="true">◔</span><span className="nav-label">Notificaciones</span></a>
           {isAdministrator && <a href="/?view=brand-assets" title="Recursos de marca"><span className="nav-icon" aria-hidden="true">◆</span><span className="nav-label">Recursos de marca</span></a>}
           {isAdministrator && <a href="/?view=control-center" title="Centro de control"><span className="nav-icon" aria-hidden="true">⚙</span><span className="nav-label">Centro de control</span></a>}
         </div>
@@ -143,7 +143,7 @@ function App() {
         <header className="topbar">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
           <span><strong>MRTI Tickets</strong><small>Tickets y seguimiento</small></span>
-          <div className="session-controls"><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span><button className="logout" onClick={handleLogout}>Cerrar sesión</button></div>
+          <div className="session-controls"><PortalNotifications /><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span><button className="logout" onClick={handleLogout}>Cerrar sesión</button></div>
         </header>
         <Routes>
           <Route path="/" element={<Dashboard />} />
