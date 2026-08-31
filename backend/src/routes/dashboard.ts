@@ -38,7 +38,7 @@ router.get('/summary', requireAuth, async (req, res) => {
        WHERE t.deleted_at IS NULL AND ${scope.sql} AND s.code NOT IN (${terminalStatuses})
        GROUP BY b.id, b.name ORDER BY \`open\` DESC, name`),
       query(`SELECT t.assigned_to AS id, COALESCE(t.assigned_to_name, 'Sin nombre') AS name,
-        COUNT(*) AS \`open\`, SUM(t.priority_code IN ('P1','P2')) AS high_priority
+        COUNT(*) AS \`open\`, SUM(t.priority_code IN ('P1','P2')) AS \`high_priority\`
        FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id LEFT JOIN ticket_categories c ON c.id = t.category_id
        WHERE t.deleted_at IS NULL AND ${scope.sql} AND t.assigned_to IS NOT NULL AND s.code NOT IN (${terminalStatuses})
        GROUP BY t.assigned_to, t.assigned_to_name ORDER BY \`open\` DESC, name LIMIT 8`),
