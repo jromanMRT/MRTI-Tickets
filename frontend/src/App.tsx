@@ -22,6 +22,13 @@ function App() {
   let profile: { full_name?: string; role?: string } = {};
   try { profile = JSON.parse(localStorage.getItem('auth_profile') || '{}'); } catch { profile = {}; }
   const isAdministrator = profile.role === 'administrator';
+  const routeTitle = location.pathname === '/'
+    ? 'Resumen'
+    : location.pathname === '/tickets/new'
+      ? 'Nuevo ticket'
+      : location.pathname.startsWith('/tickets/')
+        ? 'Detalle del ticket'
+        : 'Tickets';
 
   async function handleLogout() {
     try {
@@ -142,8 +149,8 @@ function App() {
       <main className="content">
         <header className="topbar">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
-          <span><strong>MRTI Tickets</strong><small>Tickets y seguimiento</small></span>
-          <div className="session-controls"><PortalNotifications /><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span><button className="logout" onClick={handleLogout}>Cerrar sesión</button></div>
+          <span><strong>{routeTitle}</strong><small>MRTI Tickets</small></span>
+          <div className="session-controls"><PortalNotifications /><a className="session-profile" href="/?view=account"><span className="session-avatar" aria-hidden="true">{(profile.full_name || 'Usuario').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span></a></div>
         </header>
         <Routes>
           <Route path="/" element={<Dashboard />} />
