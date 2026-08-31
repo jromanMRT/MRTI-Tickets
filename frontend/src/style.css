@@ -420,3 +420,15 @@ textarea { resize: vertical; }
   .bar-row { grid-template-columns: minmax(110px, 1fr) 80px 26px; }
   .priority-summary { grid-template-columns: 1fr 1fr; }
 }
+.requester-card { display: grid; gap: 16px; }
+.requester-card .eyebrow { margin: 0; }
+.requester-profile { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.requester-avatar { display: grid; flex: 0 0 48px; width: 48px; height: 48px; place-items: center; border-radius: 50%; color: rgb(34 27 18); background: rgb(var(--gold-bright)); font-weight: 800; letter-spacing: .04em; }
+.requester-profile div { min-width: 0; }
+.requester-profile h2 { margin: 0 0 3px; font-size: 1rem; overflow-wrap: anywhere; }
+.requester-profile p { margin: 0 0 4px; color: rgb(var(--ink-soft)); font-size: .82rem; overflow-wrap: anywhere; }
+.requester-profile strong { color: rgb(var(--ink-soft)); font-size: .74rem; }
+.requester-context { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.requester-context span { display: grid; gap: 3px; padding: 10px; border: 1px solid rgb(var(--line)); border-radius: 10px; background: rgb(var(--surface-soft)); }
+.requester-context small { color: rgb(var(--ink-soft)); font-size: .68rem; }
+.requester-context strong { font-size: .78rem; overflow-wrap: anywhere; }

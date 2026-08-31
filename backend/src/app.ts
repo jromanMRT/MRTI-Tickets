@@ -22,6 +22,7 @@ import ticketsSelfRouter from './routes/ticketsSelf';
 import businessAreasRouter from './routes/businessAreas';
 import auditEventsRouter from './routes/auditEvents';
 import { auditMutations } from './middlewares/auditMutations';
+import ticketUserCreationLimitsRouter from './routes/ticketUserCreationLimits';
 
 export function createApp() {
   const app = express();
@@ -46,6 +47,7 @@ export function createApp() {
   app.use('/api/subcategories', subcategoriesRouter);
   app.use('/api/business-areas', businessAreasRouter);
   app.use('/api/audit-events', auditEventsRouter);
+  app.use('/api/ticket-user-creation-limits', ticketUserCreationLimitsRouter);
   app.use('/api/priorities', prioritiesRouter);
   app.use('/api/statuses', statusesRouter);
   app.use('/api/tickets/:id/comments', commentsRouter);

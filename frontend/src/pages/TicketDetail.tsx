@@ -114,6 +114,7 @@ export default function TicketDetail() {
 
   if (error && !ticket) return <div className="panel error">{error} <Link to="/tickets">Volver</Link></div>;
   if (!ticket) return <div className="panel muted">Cargando ticket…</div>;
+  const requesterInitials = (ticket.requester_name || 'SI').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 
   return (
     <div className="page-stack">
@@ -140,6 +141,14 @@ export default function TicketDetail() {
           <section className="panel"><h2>Historial</h2><div className="timeline">{history.map((item, index) => <div key={`${item.created_at}-${index}`}><span></span><p><strong>{item.to_status_name}</strong>{item.comment && <> · {item.comment}</>}<small>{new Date(item.created_at).toLocaleString()}</small></p></div>)}</div></section>
         </div>
         <aside className="page-stack">
+          <section className="panel requester-card">
+            <p className="eyebrow">Persona que levantó el ticket</p>
+            <div className="requester-profile">
+              <span className="requester-avatar" aria-hidden="true">{requesterInitials}</span>
+              <div><h2>{ticket.requester_name || 'Solicitante sin identificar'}</h2><p>{ticket.requester_email || 'Correo no disponible'}</p><strong>{ticket.requester_number ? `USR-${String(ticket.requester_number).padStart(6, '0')}` : 'Sin número de usuario'}</strong></div>
+            </div>
+            <div className="requester-context"><span><small>Ubicación al crear</small><strong>{ticket.origin_area_name || 'Sin ubicación'}</strong></span><span><small>Equipo habitual</small><strong>{ticket.requester_device_internal_id || 'Sin equipo'}</strong></span></div>
+          </section>
           {sla && <section className={`panel sla-card sla-state-${sla.state.toLowerCase().replace(/\s+/g, '-')}`}>
             <div className="sla-card-heading"><div><p className="eyebrow">Acuerdo de servicio</p><h2>{sla.state}</h2></div><strong>{sla.percentConsumed === null ? '—' : `${sla.percentConsumed}%`}</strong></div>
             {sla.percentConsumed !== null && <div className="sla-progress" aria-label={`${sla.percentConsumed}% del SLA consumido`}><span style={{ width: `${Math.max(Math.min(sla.percentConsumed, 100), 2)}%` }} /></div>}

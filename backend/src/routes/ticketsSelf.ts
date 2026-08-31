@@ -7,6 +7,7 @@ import { logAudit } from '../services/audit';
 import { validateTicketClassification } from '../services/ticketAreaAccess';
 import { listTeamTicketNotifications } from '../services/teamNotifications';
 import { selfTicketEditState } from '../services/selfTicketEditing';
+import { sendTicketCreationLimitError, withTicketCreationPermission } from '../services/ticketCreationLimits';
 
 const router = Router();
 
@@ -177,7 +178,7 @@ router.post('/', requireCoreAuth, async (req, res) => {
     const context = await getTicketContext(bearerToken(req));
     const primaryDevice = context?.primary_device || null;
     const location = context?.location || null;
-    const ticket = await createTicket({
+    const ticket = await withTicketCreationPermission(userId, () => createTicket({
       title,
       description: description || null,
       business_area_id: areaId,
@@ -199,11 +200,12 @@ router.post('/', requireCoreAuth, async (req, res) => {
       origin_area_id: location?.area_id || null,
       origin_area_name: location?.area_name || null,
       created_by: userId,
-    });
+    }));
     await logAudit(userId, req.user?.name || req.user?.full_name || null, 'ticket.self.create', 'ticket', ticket.id, null, ticket);
     res.status(201).json({ success: true, data: ticket, message: 'Ticket enviado correctamente' });
   } catch (err) {
     console.error(err);
+    if (sendTicketCreationLimitError(res, err)) return;
     res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al crear el ticket' } });
   }
 });
