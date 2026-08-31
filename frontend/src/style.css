@@ -10,12 +10,14 @@
   --surface-soft: 241 234 217;
   --ink: 34 27 18;
   --ink-soft: 108 95 71;
-  --ink-faint: 156 143 120;
+  --ink-faint: 112 95 63;
   --line: 225 211 171;
   --gold: 169 120 31;
   --gold-bright: 217 166 60;
   --gold-deep: 110 77 22;
+  --gold-text: 110 77 22;
   --good: 47 125 67;
+  --good-text: 35 94 50;
   --info: 63 106 134;
   --bad: 161 67 47;
   --warning: 146 94 14;
@@ -35,7 +37,9 @@
     --gold: 217 166 60;
     --gold-bright: 243 214 141;
     --gold-deep: 202 160 84;
+    --gold-text: 243 214 141;
     --good: 111 207 140;
+    --good-text: 111 207 140;
     --info: 142 194 224;
     --bad: 224 138 114;
     --warning: 243 191 94;
@@ -55,7 +59,9 @@
   --gold: 217 166 60;
   --gold-bright: 243 214 141;
   --gold-deep: 202 160 84;
+  --gold-text: 243 214 141;
   --good: 111 207 140;
+  --good-text: 111 207 140;
   --info: 142 194 224;
   --bad: 224 138 114;
   --warning: 243 191 94;
@@ -168,7 +174,7 @@ textarea { resize: vertical; }
 .table-link { color: rgb(var(--gold-deep)); font-weight: 750; text-decoration: none; }
 .table-subline { display: block; margin-top: 3px; color: rgb(var(--ink-faint)); font-size: .7rem; }
 .status, .priority { display: inline-flex; padding: 5px 9px; border-radius: 999px; color: rgb(var(--info)); background: rgb(var(--info) / .16); font-size: .72rem; font-weight: 750; white-space: nowrap; }
-.status-resolved, .status-closed { color: rgb(var(--good)); background: rgb(var(--good) / .16); }
+.status-resolved, .status-closed { color: rgb(var(--good-text)); background: rgb(var(--good) / .16); }
 .status-cancelled { color: rgb(var(--ink-faint)); background: rgb(var(--surface-soft)); }
 .status-on_hold_user, .status-on_hold_vendor { color: rgb(var(--warning)); background: rgb(var(--warning-bg)); }
 .priority-p1 { color: rgb(var(--bad)); background: rgb(var(--bad) / .16); }
@@ -313,7 +319,7 @@ textarea { resize: vertical; }
 .sla-pill { display: inline-flex; padding: 5px 9px; border-radius: 999px; color: rgb(var(--ink-soft)); background: rgb(var(--surface-soft)); font-size: .7rem; font-weight: 750; white-space: nowrap; }
 .sla-overdue { color: rgb(var(--bad)); background: rgb(var(--bad) / .14); }
 .sla-at_risk { color: rgb(var(--warning)); background: rgb(var(--warning) / .14); }
-.sla-on_track, .sla-completed { color: rgb(var(--good)); background: rgb(var(--good) / .14); }
+.sla-on_track, .sla-completed { color: rgb(var(--good-text)); background: rgb(var(--good) / .14); }
 .unassigned-label { color: rgb(var(--warning)); font-weight: 700; }
 .activity-counts { display: flex; gap: 9px; color: rgb(var(--ink-soft)); font-size: .72rem; }
 .loading-row { padding: 28px 4px; }
