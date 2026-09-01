@@ -29,13 +29,6 @@ function App() {
       : location.pathname.startsWith('/tickets/')
         ? 'Detalle del ticket'
         : 'Tickets';
-  const reportTitle = location.pathname === '/'
-    ? 'Centro operativo'
-    : location.pathname === '/tickets'
-      ? 'Bandeja de tickets'
-      : location.pathname.startsWith('/tickets/') && location.pathname !== '/tickets/new'
-        ? 'Detalle del ticket'
-        : '';
 
   async function handleLogout() {
     try {
@@ -157,9 +150,8 @@ function App() {
         <header className="topbar">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
           <span><strong>{routeTitle}</strong><small>MRTI Tickets</small></span>
-          <div className="session-controls">{reportTitle && <button type="button" className="print-report-button" onClick={() => window.print()} title="Imprimir reporte de esta vista" aria-label="Imprimir reporte de esta vista"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z" /></svg><span>Imprimir reporte</span></button>}<PortalNotifications /><a className="session-profile" href="/?view=account"><span className="session-avatar" aria-hidden="true">{(profile.full_name || 'Usuario').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span></a></div>
+          <div className="session-controls"><PortalNotifications /><a className="session-profile" href="/?view=account"><span className="session-avatar" aria-hidden="true">{(profile.full_name || 'Usuario').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span></a></div>
         </header>
-        {reportTitle && <div className="print-report-header" aria-hidden="true"><div><strong>MRTI</strong><span>MRTI Tickets · {reportTitle}</span></div><small>Generado {new Date().toLocaleString('es-MX')}</small></div>}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/tickets" element={<Tickets />} />
