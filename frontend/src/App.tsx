@@ -105,7 +105,7 @@ function App() {
       <button className="sidebar-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación" />
       <aside className="sidebar" id="tickets-sidebar" aria-label="Navegación de Tickets">
         <div className="brand-row">
-          <a href="/" title="Volver al Core" className="brand"><span className="brand-mark"><img src={logoUrl} alt="" /></span><span className="brand-text"><strong>MRTI Tickets</strong><small>Volver a Mi espacio</small></span></a>
+          <a href="/" title="Ir a Mi espacio" aria-label="Ir a Mi espacio" className="brand-mark"><img src={logoUrl} alt="" /></a><span className="brand-text"><strong>MRTI Tickets</strong><small>Minera Río Tinto</small></span>
         </div>
         <nav>
           <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>

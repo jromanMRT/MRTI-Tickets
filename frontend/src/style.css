@@ -99,13 +99,14 @@ a { color: rgb(var(--gold-deep)); }
 
 .sidebar { position: sticky; top: 0; display: flex; height: 100vh; flex-direction: column; padding: 18px 14px; color: rgb(var(--ink)); background: linear-gradient(180deg, rgb(var(--gold) / .055), transparent 13rem), rgb(var(--surface)); border-right: 1px solid rgb(var(--line)); transition: padding 200ms ease; }
 .app-shell.sidebar-collapsed .sidebar { padding: 18px 10px; align-items: center; }
-.brand-row { display: flex; min-height: 61px; align-items: flex-start; gap: 10px; margin: 0; padding: 0 4px 18px; border-bottom: 1px solid rgb(var(--line)); }
+.brand-row { display: flex; min-height: 61px; align-items: center; gap: 12px; margin: 0; padding: 0 4px 18px; border-bottom: 1px solid rgb(var(--line)); }
 .app-shell.sidebar-collapsed .brand-row { width: 100%; margin: 0; padding-inline: 0; align-items: center; justify-content: center; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 750; letter-spacing: -0.02em; text-decoration: none; white-space: nowrap; }
 .brand-mark { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border: 1px solid rgb(var(--gold) / .3); border-radius: 12px; background: linear-gradient(145deg, rgb(var(--gold-bright) / .16), rgb(var(--gold) / .06)); }
 .brand-mark img { width: 34px; height: 34px; }
-.brand-text { display: grid; min-width: 0; gap: 1px; color: rgb(var(--ink)); }
-.brand-text small { color: rgb(var(--gold-deep)); font-size: .68rem; font-weight: 600; }
+.brand-text { display: grid; min-width: 0; gap: 0; color: rgb(var(--ink)); }
+.brand-text strong { overflow: hidden; font-family: 'Big Shoulders Display', system-ui, sans-serif; font-size: 1.15rem; font-weight: 800; font-variation-settings: 'wght' 800; letter-spacing: .1em; line-height: 1.2; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.brand-text small { overflow: hidden; max-width: 150px; color: rgb(var(--ink-faint)); font-size: .78rem; font-weight: 600; letter-spacing: .08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .app-shell.sidebar-collapsed .brand-text { display: none; }
 .sidebar nav { display: flex; flex: 1; flex-direction: column; gap: 4px; width: 100%; padding-top: 14px; }
 .sidebar nav a { display: flex; min-height: 42px; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 11px; color: rgb(var(--ink-soft)); text-decoration: none; transition: 150ms ease; }
