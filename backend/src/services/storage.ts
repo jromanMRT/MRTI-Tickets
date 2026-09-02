@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 const BASE = process.env.ATTACHMENTS_PATH || path.join(process.cwd(), 'storage', 'attachments');
 
@@ -10,7 +10,7 @@ export async function ensureBase() {
 
 export async function saveAttachment(originalName: string, buffer: Buffer, mimeType: string) {
   await ensureBase();
-  const id = uuidv4();
+  const id = randomUUID();
   const safe = `${id}-${originalName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
   const target = path.join(BASE, safe);
   await fs.promises.writeFile(target, buffer);
