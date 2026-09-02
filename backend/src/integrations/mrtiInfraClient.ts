@@ -1,17 +1,22 @@
 import axios from 'axios';
 
 const base = process.env.MRTI_INFRA_API_URL;
+const TIMEOUT_MS = 4000;
 
-// TODO(deuda técnica): /api/devices/:id nunca existió en MRTI-Infra (que expone
-// dispositivos vía /api/db/devices, con UUID en vez de id numérico), y nada
-// llama hoy al webhook que invoca esta función — falla en silencio y no
-// bloquea la creación del ticket. No implementar hasta definir con MRTI-Infra
-// un endpoint autenticado por clave de servicio y el esquema real de id de
-// equipo que usará quien dispare ese webhook.
+// MRTI-Infra (MRTI-Obs) expone el dispositivo por id vía autoservicio
+// (GET /api/self/devices/:id) -- corrige la deuda técnica anterior, que
+// llamaba a /api/devices/:id, un endpoint que nunca existió (ver historial
+// de este archivo). device.asset_id YA es el asset_uid de MRTI-Activos
+// (Fase 6 de CORE_INFRA_MIGRATION_GUIDE.md: MRTI-Obs traduce device<->asset).
+// Llamada de servicio: no hay usuario navegando en este flujo (evento
+// automático de Agent Core), así que se usa la llave compartida.
 export async function getDeviceInfo(deviceId: number) {
   if (!base) return null;
   try {
-    const resp = await axios.get(`${base}/api/devices/${deviceId}`);
+    const resp = await axios.get(`${base}/api/self/devices/${deviceId}`, {
+      headers: { 'X-Service-Key': process.env.INTERNAL_SERVICE_KEY || '' },
+      timeout: TIMEOUT_MS,
+    });
     return resp.data?.data || null;
   } catch (err: any) {
     // eslint-disable-next-line no-console

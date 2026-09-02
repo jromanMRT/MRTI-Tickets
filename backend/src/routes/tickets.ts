@@ -6,6 +6,7 @@ import { logAudit } from '../services/audit';
 import { getTicketContext } from '../integrations/coreClient';
 import { getTicketAreaScope, requireTicketAreaAccess, validateTicketClassification } from '../services/ticketAreaAccess';
 import { sendTicketCreationLimitError, withTicketCreationPermission } from '../services/ticketCreationLimits';
+import { validateAssetUid } from '../integrations/activosClient';
 
 const router = Router();
 
@@ -48,6 +49,10 @@ router.get('/', requireAuth, async (req, res) => {
     clauses.push('t.assigned_to = ?');
     params.push(String(req.query.assigned_to));
   }
+  if (req.query.asset_uid) {
+    clauses.push('t.asset_uid = ?');
+    params.push(String(req.query.asset_uid));
+  }
   const terminalStatuses = "'RESOLVED','CLOSED','CANCELLED'";
   const scope = String(req.query.scope || '');
   if (scope === 'open') clauses.push(`s.code NOT IN (${terminalStatuses})`);
@@ -78,7 +83,7 @@ router.get('/', requireAuth, async (req, res) => {
       `SELECT t.id, t.folio, t.title, t.priority_code, t.assigned_to,
               t.assigned_to_name, t.requester_name, t.created_at, t.updated_at,
               t.origin_area_name, t.origin_site_name, t.affected_device_internal_id,
-              t.affected_device_name,
+              t.affected_device_name, t.asset_uid,
               s.code AS status_code, s.name AS status_name,
               p.name AS priority_name,
               COALESCE(t.business_area_id, c.business_area_id) AS business_area_id, b.name AS business_area_name,
@@ -144,6 +149,19 @@ router.post('/', requireAuth, async (req, res) => {
     }
     const primaryDevice = context?.primary_device || null;
     const location = context?.location || null;
+
+    // asset_uid es opcional (ej. botón "Crear ticket" desde el popup de un
+    // activo en MRTI-Activos) -- si viene, se valida contra Activos antes de
+    // guardarlo; "no existe" se rechaza, "Activos no disponible" no bloquea
+    // la creación (se guarda sin verificar, ver activosClient.ts).
+    const requestedAssetUid = String(req.body.asset_uid || '').trim() || null;
+    if (requestedAssetUid) {
+      const validation = await validateAssetUid(requestedAssetUid, { userToken: bearerToken(req) });
+      if (validation.status === 'not_found') {
+        return res.status(400).json({ success: false, error: { code: 'ASSET_NOT_FOUND', message: 'El activo indicado no existe' } });
+      }
+    }
+
     const ticket = await withTicketCreationPermission(String(req.user?.id || ''), () => createTicket({
       title: String(title).trim(),
       description: String(description || '').trim() || null,
@@ -153,6 +171,7 @@ router.post('/', requireAuth, async (req, res) => {
       categories: [{ category_id: categoryId, subcategory_id: subcategoryId }],
       related_device_id: affectedDevice?.id || null,
       asset_number: affectedDevice?.inventory_tag || affectedDevice?.internal_id || null,
+      asset_uid: requestedAssetUid,
       priority_code: priority_code || 'P3',
       requester_id: req.user?.id || null,
       requester_name: req.user?.name || req.user?.full_name || null,

@@ -38,9 +38,11 @@ router.post('/', authAgentOrUser, async (req, res) => {
     const priorityMap: any = { critical: 'P1', high: 'P2', medium: 'P3', low: 'P4' };
     const priority = priorityMap[severity] || 'P3';
 
-    // fetch device info to include in description
+    // fetch device info to include in description; asset_id (si existe) ya
+    // es el asset_uid de Activos -- ver mrtiInfraClient.ts
     const deviceInfo = await getDeviceInfo(Number(deviceId));
-    const deviceSummary = deviceInfo ? `Equipo: ${deviceInfo.name || deviceId} (asset: ${deviceInfo.asset_number || ''}, ip: ${deviceInfo.ip || ''})\n` : `Equipo id: ${deviceId}\n`;
+    const deviceSummary = deviceInfo ? `Equipo: ${deviceInfo.name || deviceId} (tag: ${deviceInfo.inventory_tag || ''}, ip: ${deviceInfo.ip_address || ''})\n` : `Equipo id: ${deviceId}\n`;
+    const assetUid: string | null = payload.asset_uid || deviceInfo?.asset_id || null;
 
     // if correlation exists and has ticket_id, append as comment if ticket active
     if (correlation && correlation.ticket_id) {
@@ -60,7 +62,7 @@ router.post('/', authAgentOrUser, async (req, res) => {
 
     const [[tiArea]]: any = await pool.query("SELECT id FROM business_areas WHERE code = 'ti' AND active = 1 LIMIT 1");
     if (!tiArea) throw new Error('El área TI no está configurada');
-    const ticket = await createTicket({ title, description, business_area_id: tiArea.id, related_device_id: String(deviceId), priority_code: priority, created_by: null });
+    const ticket = await createTicket({ title, description, business_area_id: tiArea.id, related_device_id: String(deviceId), asset_uid: assetUid, priority_code: priority, created_by: null });
 
     if (correlation) {
       await pool.query('UPDATE automatic_event_correlations SET ticket_id = ?, occurrences = occurrences + 1, last_seen = NOW() WHERE id = ?', [ticket.id, correlation.id]);

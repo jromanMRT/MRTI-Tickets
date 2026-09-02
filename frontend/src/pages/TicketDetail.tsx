@@ -7,6 +7,7 @@ interface Ticket {
   id: number; folio: string; title: string; description?: string; status_code: string; status_name: string;
   priority_code?: string; priority_name?: string; category_name?: string; categories?: TicketCategoryLink[]; requester_name?: string;
   requester_email?: string; requester_number?: number; assigned_to?: string; assigned_to_name?: string; asset_number?: string;
+  asset_uid?: string;
   related_device_id?: string; requester_device_internal_id?: string; requester_device_name?: string;
   affected_device_internal_id?: string; affected_device_name?: string; origin_site_name?: string;
   origin_building_name?: string; origin_floor_name?: string; origin_area_name?: string;
@@ -18,6 +19,11 @@ interface Comment { id: number; author_name?: string; content: string; is_privat
 interface Attachment { id: number; filename: string; mime_type: string; size_bytes: number; created_at: string }
 interface HistoryItem { to_status_name: string; from_status_name?: string; comment?: string; created_at: string }
 interface Assignee { id: string; full_name: string; role: string }
+interface RelatedAsset {
+  id: number; asset_uid: string; center_code: string; descripcion?: string; tipo?: string;
+  marca?: string; modelo?: string; service_tag?: string; numero_serie?: string; estado?: string;
+  unidad?: string; empresa?: string; usuario_asignado?: string;
+}
 interface SlaStatus { elapsedMinutes: number; remainingMinutes: number | null; percentConsumed: number | null; state: 'En tiempo' | 'En riesgo' | 'Vencido' | 'Pausado' | 'Cumplido' | 'Sin SLA'; deadline: string | null }
 
 function duration(minutes: number | null) {
@@ -38,6 +44,8 @@ export default function TicketDetail() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [sla, setSla] = useState<SlaStatus | null>(null);
+  const [relatedAsset, setRelatedAsset] = useState<RelatedAsset | null>(null);
+  const [assetError, setAssetError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
 
@@ -56,6 +64,31 @@ export default function TicketDetail() {
       // solo muestre al equipo de esa área (si ya tiene uno registrado).
       const assigneeRes = await api.get('/assignees', { params: loadedTicket.business_area_id ? { business_area_id: loadedTicket.business_area_id } : {} });
       setAssignees(assigneeRes.data.data || []);
+
+      // Activo relacionado: se lee en vivo de MRTI-Activos (nunca se copia
+      // aquí) vía su endpoint de autoservicio, mismo origen por Nginx que el
+      // resto de las llamadas -api/. Una falla no bloquea el resto del ticket.
+      if (loadedTicket.asset_uid) {
+        setAssetError('');
+        try {
+          const token = localStorage.getItem('auth_token');
+          const assetRes = await fetch(`/activos-api/api/activos-self/uid/${encodeURIComponent(loadedTicket.asset_uid)}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (assetRes.ok) {
+            const body = await assetRes.json();
+            setRelatedAsset(body.data || null);
+          } else {
+            setRelatedAsset(null);
+            setAssetError(assetRes.status === 404 ? 'El activo relacionado ya no existe' : 'No se pudo consultar el activo relacionado');
+          }
+        } catch {
+          setRelatedAsset(null);
+          setAssetError('No se pudo consultar el activo relacionado');
+        }
+      } else {
+        setRelatedAsset(null);
+      }
       setError('');
     } catch (requestError: any) {
       setError(requestError.response?.data?.error?.message || 'No se pudo cargar el ticket');
@@ -149,6 +182,24 @@ export default function TicketDetail() {
             </div>
             <div className="requester-context"><span><small>Ubicación al crear</small><strong>{ticket.origin_area_name || 'Sin ubicación'}</strong></span><span><small>Equipo habitual</small><strong>{ticket.requester_device_internal_id || 'Sin equipo'}</strong></span></div>
           </section>
+          {ticket.asset_uid && (
+            <section className="panel">
+              <p className="eyebrow">Activo relacionado</p>
+              {relatedAsset ? (
+                <>
+                  <h2>{relatedAsset.center_code}</h2>
+                  <p>{relatedAsset.descripcion || `${relatedAsset.tipo || ''} ${relatedAsset.marca || ''} ${relatedAsset.modelo || ''}`.trim() || 'Sin descripción'}</p>
+                  <div className="requester-context">
+                    <span><small>Estado</small><strong>{relatedAsset.estado || '—'}</strong></span>
+                    <span><small>Asignado a</small><strong>{relatedAsset.usuario_asignado || 'Sin asignar'}</strong></span>
+                  </div>
+                  <a className="button secondary full-button" href={`/activos/${relatedAsset.id}`} target="_blank" rel="noreferrer">Abrir activo</a>
+                </>
+              ) : (
+                <p className="muted">{assetError || 'Cargando…'}</p>
+              )}
+            </section>
+          )}
           {sla && <section className={`panel sla-card sla-state-${sla.state.toLowerCase().replace(/\s+/g, '-')}`}>
             <div className="sla-card-heading"><div><p className="eyebrow">Acuerdo de servicio</p><h2>{sla.state}</h2></div><strong>{sla.percentConsumed === null ? '—' : `${sla.percentConsumed}%`}</strong></div>
             {sla.percentConsumed !== null && <div className="sla-progress" aria-label={`${sla.percentConsumed}% del SLA consumido`}><span style={{ width: `${Math.max(Math.min(sla.percentConsumed, 100), 2)}%` }} /></div>}

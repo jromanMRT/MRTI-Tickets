@@ -8,6 +8,7 @@ import { validateTicketClassification } from '../services/ticketAreaAccess';
 import { listTeamTicketNotifications } from '../services/teamNotifications';
 import { selfTicketEditState } from '../services/selfTicketEditing';
 import { sendTicketCreationLimitError, withTicketCreationPermission } from '../services/ticketCreationLimits';
+import { validateAssetUid } from '../integrations/activosClient';
 
 const router = Router();
 
@@ -178,6 +179,17 @@ router.post('/', requireCoreAuth, async (req, res) => {
     const context = await getTicketContext(bearerToken(req));
     const primaryDevice = context?.primary_device || null;
     const location = context?.location || null;
+
+    // asset_uid opcional: botón "Crear ticket" desde el popup de un activo
+    // en MRTI-Activos (Core abre este formulario con ?openTicket=1&asset_uid=...).
+    const requestedAssetUid = String(req.body?.asset_uid || '').trim() || null;
+    if (requestedAssetUid) {
+      const validation = await validateAssetUid(requestedAssetUid, { userToken: bearerToken(req) });
+      if (validation.status === 'not_found') {
+        return res.status(400).json({ success: false, error: { code: 'ASSET_NOT_FOUND', message: 'El activo indicado no existe' } });
+      }
+    }
+
     const ticket = await withTicketCreationPermission(userId, () => createTicket({
       title,
       description: description || null,
@@ -186,6 +198,7 @@ router.post('/', requireCoreAuth, async (req, res) => {
       subcategory_id: subcategoryId,
       categories: [{ category_id: categoryId, subcategory_id: subcategoryId }],
       priority_code: priorityCode,
+      asset_uid: requestedAssetUid,
       requester_id: userId,
       requester_name: req.user?.name || req.user?.full_name || null,
       requester_email: req.user?.email || null,

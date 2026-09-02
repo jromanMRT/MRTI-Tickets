@@ -37,7 +37,8 @@ function Tickets() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const activeFilters = ['status', 'priority', 'business_area_id', 'q', 'assigned_to'].filter((key) => searchParams.get(key)).length;
+  const activeFilters = ['status', 'priority', 'business_area_id', 'q', 'assigned_to', 'asset_uid'].filter((key) => searchParams.get(key)).length;
+  const assetUidFilter = searchParams.get('asset_uid') || '';
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +77,13 @@ function Tickets() {
       <div className="queue-tabs" role="tablist" aria-label="Colas de trabajo">
         {queueOptions.map((queue) => <button type="button" key={queue.value} className={`queue-tab ${searchParams.get('scope') === queue.value || (!searchParams.get('scope') && queue.value === '') ? 'active' : ''}`} onClick={() => updateParam('scope', queue.value)}>{queue.label}</button>)}
       </div>
+
+      {assetUidFilter && (
+        <div className="panel" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}>
+          <span>Filtrando por activo relacionado: <code>{assetUidFilter}</code></span>
+          <button type="button" className="filter-clear" onClick={() => updateParam('asset_uid', '')}>Quitar filtro</button>
+        </div>
+      )}
 
       <form className="filters enterprise-filters panel" onSubmit={submit}>
         <div className="search-control"><span aria-hidden="true">⌕</span><input aria-label="Buscar tickets" placeholder="Folio, título, solicitante, ubicación o equipo" value={draftQuery} onChange={(event) => setDraftQuery(event.target.value)} /></div>

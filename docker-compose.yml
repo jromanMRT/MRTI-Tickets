@@ -29,11 +29,16 @@ services:
       - DATABASE_NAME=mrti_tickets
       - CORE_API_URL=http://host.docker.internal:8477
       - MRTI_INFRA_API_URL=http://host.docker.internal:3002
+      - MRTI_ACTIVOS_API_URL=http://host.docker.internal:3003
       - AUTH_PROFILE_URL=http://host.docker.internal:3005/api/auth/me
       - AUTH_TICKET_CONTEXT_URL=http://host.docker.internal:3005/api/auth/ticket-context
       - AUTH_ASSIGNEES_URL=http://host.docker.internal:3005/api/auth/assignees
       - AGENT_API_KEY=changeme
       - CORE_NOTIFICATION_URL=http://host.docker.internal:3002/api/notifications
+      # Llamadas de servicio hacia Activos/Infra sin usuario navegando (Fase 1
+      # de la integración de plataforma) -- mismo valor que INTERNAL_SERVICE_KEY
+      # en los .env de MRTI-Activos y MRTI-Infra.
+      - INTERNAL_SERVICE_KEY=b98a9c2174252bcdeba70b0902a08b81725f0428000923b7d0e1088c8c387ad3
     depends_on:
       db:
         condition: service_healthy

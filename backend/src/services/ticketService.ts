@@ -11,6 +11,7 @@ export async function createTicket(data: {
   categories?: Array<{ category_id: number; subcategory_id: number | null }>;
   related_device_id?: string | null;
   asset_number?: string | null;
+  asset_uid?: string | null;
   priority_code?: string | null;
   requester_id?: string | null;
   requester_name?: string | null;
@@ -49,13 +50,13 @@ export async function createTicket(data: {
     const [insertResult]: any = await connection.query(
       `INSERT INTO tickets
         (folio, title, description, requester_id, requester_name, requester_email,
-         requester_number, category_id, subcategory_id, related_device_id, asset_number,
+         requester_number, category_id, subcategory_id, related_device_id, asset_number, asset_uid,
          requester_device_id, requester_device_internal_id, requester_device_name,
          affected_device_internal_id, affected_device_name,
          origin_site_id, origin_site_name, origin_building_name, origin_floor_name,
          origin_area_id, origin_area_name, business_area_id, priority_code, assigned_to, created_by,
          status_id, sla_policy_id)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         pendingFolio,
         data.title,
@@ -68,6 +69,7 @@ export async function createTicket(data: {
         data.subcategory_id || null,
         data.related_device_id || null,
         data.asset_number || null,
+        data.asset_uid || null,
         data.requester_device_id || null,
         data.requester_device_internal_id || null,
         data.requester_device_name || null,
