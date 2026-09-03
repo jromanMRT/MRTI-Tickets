@@ -7,6 +7,7 @@ import NewTicket from './pages/NewTicket';
 import api from './services/api';
 import { useTheme } from './hooks/useTheme';
 import { PortalNotifications } from './components/PortalNotifications';
+import { ModuleSwitcher } from './components/ModuleSwitcher';
 import './style.css';
 import './shell.css';
 
@@ -15,7 +16,6 @@ function App() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_tickets_sidebar_collapsed') === '1');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [applications, setApplications] = useState<Array<{ code: string; name: string; url: string }>>([]);
   const [logoUrl, setLogoUrl] = useState('/company-logo.svg');
   const [theme, setTheme] = useTheme();
   const location = useLocation();
@@ -50,15 +50,6 @@ function App() {
     }
     api.get('/session').then(() => setAuthenticated(true)).catch(() => setAuthenticated(false)).finally(() => setCheckingSession(false));
     return () => window.removeEventListener('mrti-auth-expired', expired);
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) return;
-    fetch('/api/portal/v1/applications', { headers: { Authorization: `Bearer ${token}` } })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then(({ data }) => setApplications(Array.isArray(data) ? data : []))
-      .catch(() => setApplications([]));
   }, []);
 
   // El logo lo administra Core (Centro de control → Recursos de marca); se
@@ -113,11 +104,6 @@ function App() {
           <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nuevo ticket</span></NavLink>
         </nav>
         <div className="module-switcher">
-          <span className="module-switcher-label">Cambiar módulo</span>
-          <a href="/" title="Mi espacio"><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Mi espacio</span></a>
-          {applications.filter((application) => application.code !== 'tickets').map((application) => <a key={application.code} href={application.code === 'agent-core' ? `${application.url}#token=${encodeURIComponent(localStorage.getItem('auth_token') || '')}&theme=${encodeURIComponent(localStorage.getItem('mrti_theme') || '')}` : application.url} title={application.name}><span className="nav-icon" aria-hidden="true">◆</span><span className="nav-label">{application.name}</span></a>)}
-        </div>
-        <div className="module-switcher">
           <span className="module-switcher-label">Mi cuenta</span>
           <a href="/?view=account" title="Perfil"><span className="nav-icon" aria-hidden="true">○</span><span className="nav-label">Perfil</span></a>
           {isAdministrator && <a href="/?view=brand-assets" title="Recursos de marca"><span className="nav-icon" aria-hidden="true">◆</span><span className="nav-label">Recursos de marca</span></a>}
@@ -149,6 +135,7 @@ function App() {
       <main className="content">
         <header className="topbar">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
+          <ModuleSwitcher />
           <span><strong>{routeTitle}</strong><small>MRTI Tickets</small></span>
           <div className="session-controls"><PortalNotifications /><a className="session-profile" href="/?view=account"><span className="session-avatar" aria-hidden="true">{(profile.full_name || 'Usuario').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span></a></div>
         </header>
