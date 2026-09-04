@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Route, Routes, NavLink, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
@@ -11,6 +11,31 @@ import { ModuleSwitcher } from './components/ModuleSwitcher';
 import './style.css';
 import './shell.css';
 
+function AccountMenu({ profile, onLogout }: { profile: { full_name?: string; role?: string }; onLogout: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const name = profile.full_name || 'Usuario';
+  const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  useEffect(() => {
+    const close = (event: MouseEvent) => { if (!ref.current?.contains(event.target as Node)) setOpen(false); };
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', closeOnEscape); };
+  }, []);
+  return <div className="account-menu" ref={ref}>
+    <button type="button" className="session-profile" onClick={() => setOpen((value) => !value)} aria-label="Abrir menú de usuario" aria-expanded={open}>
+      <span className="session-avatar" aria-hidden="true">{initials}</span><span className="account-identity"><strong>{name}</strong><small>{profile.role || 'Sesión activa'}</small></span><span className="account-chevron" aria-hidden="true">⌄</span>
+    </button>
+    {open && <div className="account-menu-panel" role="menu">
+      <a href="/?view=account" role="menuitem"><span aria-hidden="true">○</span>Perfil</a>
+      {profile.role === 'administrator' && <a href="/?view=brand-assets" role="menuitem"><span aria-hidden="true">◆</span>Recursos de marca</a>}
+      {profile.role === 'administrator' && <a href="/?view=control-center" role="menuitem"><span aria-hidden="true">⚙</span>Centro de control</a>}
+      <button type="button" className="account-menu-logout" onClick={onLogout} role="menuitem"><span aria-hidden="true">↪</span>Cerrar sesión</button>
+    </div>}
+  </div>;
+}
+
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -21,7 +46,6 @@ function App() {
   const location = useLocation();
   let profile: { full_name?: string; role?: string } = {};
   try { profile = JSON.parse(localStorage.getItem('auth_profile') || '{}'); } catch { profile = {}; }
-  const isAdministrator = profile.role === 'administrator';
   const routeTitle = location.pathname === '/'
     ? 'Resumen'
     : location.pathname === '/tickets/new'
@@ -96,19 +120,13 @@ function App() {
       <button className="sidebar-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación" />
       <aside className="sidebar" id="tickets-sidebar" aria-label="Navegación de Tickets">
         <div className="brand-row">
-          <a href="/" title="Ir a Mi espacio" aria-label="Ir a Mi espacio" className="brand-mark"><img src={logoUrl} alt="" /></a><span className="brand-text"><strong>MRTI</strong><small>Minera Río Tinto</small></span>
+          <a href="/" title="Ir a MRTI Core" aria-label="Ir a MRTI Core" className="brand-home"><span className="brand-mark"><img src={logoUrl} alt="" /></span><span className="brand-text"><strong><span>MRTI</span><span className="brand-module">Tickets</span></strong><small>Minera Río Tinto</small></span></a>
         </div>
         <nav>
           <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>
           <NavLink to="/tickets" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">◇</span><span className="nav-label">Tickets</span></NavLink>
           <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nuevo ticket</span></NavLink>
         </nav>
-        <div className="module-switcher">
-          <span className="module-switcher-label">Mi cuenta</span>
-          <a href="/?view=account" title="Perfil"><span className="nav-icon" aria-hidden="true">○</span><span className="nav-label">Perfil</span></a>
-          {isAdministrator && <a href="/?view=brand-assets" title="Recursos de marca"><span className="nav-icon" aria-hidden="true">◆</span><span className="nav-label">Recursos de marca</span></a>}
-          {isAdministrator && <a href="/?view=control-center" title="Centro de control"><span className="nav-icon" aria-hidden="true">⚙</span><span className="nav-label">Centro de control</span></a>}
-        </div>
         <div className="sidebar-footer">
           <button
             type="button"
@@ -129,7 +147,6 @@ function App() {
           >
             {collapsed ? '»' : '«'}
           </button>
-          <button type="button" className="icon-button sidebar-logout-button" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">↪</button>
         </div>
       </aside>
       <main className="content">
@@ -137,7 +154,7 @@ function App() {
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
           <ModuleSwitcher />
           <span><strong>{routeTitle}</strong><small>MRTI Tickets</small></span>
-          <div className="session-controls"><PortalNotifications /><a className="session-profile" href="/?view=account"><span className="session-avatar" aria-hidden="true">{(profile.full_name || 'Usuario').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><span><strong>{profile.full_name || 'Usuario'}</strong><small>{profile.role || 'Sesión activa'}</small></span></a></div>
+          <div className="session-controls"><PortalNotifications /><AccountMenu profile={profile} onLogout={() => void handleLogout()} /></div>
         </header>
         <Routes>
           <Route path="/" element={<Dashboard />} />
