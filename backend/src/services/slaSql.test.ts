@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slaIsAtRiskSql, slaIsOverdueSql, slaStateCaseSql, SLA_DEADLINE_SQL } from './slaSql';
+import { slaIsAtRiskSql, slaIsOverdueSql, slaStateCaseSql, SLA_DEADLINE_SQL, SLA_POLICY_RESOLUTION_SQL } from './slaSql';
 
 describe('fragmentos SQL de SLA', () => {
   it('el estado vencido/en riesgo siempre exige que el ticket no esté pausado', () => {
@@ -24,5 +24,15 @@ describe('fragmentos SQL de SLA', () => {
     expect(pausedIndex).toBeLessThan(overdueIndex);
     expect(overdueIndex).toBeLessThan(atRiskIndex);
     expect(sql).toContain("'RESOLVED','CLOSED'");
+  });
+
+  it('la resolución de política de SLA prefiere categoría, luego área, luego la genérica', () => {
+    expect(SLA_POLICY_RESOLUTION_SQL).toContain('priority_code = ?');
+    expect(SLA_POLICY_RESOLUTION_SQL).toContain('category_id = ? OR category_id IS NULL');
+    expect(SLA_POLICY_RESOLUTION_SQL).toContain('business_area_id = ? OR business_area_id IS NULL');
+    const categoryOrderIndex = SLA_POLICY_RESOLUTION_SQL.indexOf('category_id IS NOT NULL');
+    const areaOrderIndex = SLA_POLICY_RESOLUTION_SQL.indexOf('business_area_id IS NOT NULL) DESC');
+    expect(categoryOrderIndex).toBeGreaterThan(-1);
+    expect(categoryOrderIndex).toBeLessThan(areaOrderIndex);
   });
 });

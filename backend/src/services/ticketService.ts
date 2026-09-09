@@ -1,6 +1,7 @@
 import pool from '../config/db';
 import { buildFolio } from './folio';
 import { randomUUID } from 'crypto';
+import { SLA_POLICY_RESOLUTION_SQL } from './slaSql';
 
 export async function createTicket(data: {
   title: string;
@@ -39,10 +40,9 @@ export async function createTicket(data: {
 
     let slaPolicyId = data.sla_policy_id || null;
     if (!slaPolicyId && data.priority_code) {
-      const [slaRows]: any = await connection.query(
-        'SELECT id FROM sla_policies WHERE priority_code = ? ORDER BY id LIMIT 1',
-        [data.priority_code]
-      );
+      const [slaRows]: any = await connection.query(SLA_POLICY_RESOLUTION_SQL, [
+        data.priority_code, data.category_id || null, data.business_area_id || null,
+      ]);
       slaPolicyId = slaRows[0]?.id || null;
     }
 

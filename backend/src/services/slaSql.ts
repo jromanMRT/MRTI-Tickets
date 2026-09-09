@@ -47,3 +47,18 @@ export function slaIsOverdueSql(): string {
 export function slaIsAtRiskSql(): string {
   return `sp.id IS NOT NULL AND t.sla_paused_since IS NULL AND ${SLA_DEADLINE_SQL} >= NOW() AND ${SLA_AT_RISK_FROM_SQL} <= NOW()`;
 }
+
+// Elige la política más específica disponible para (prioridad, categoría,
+// área): una fila con category_id/business_area_id en NULL significa
+// "aplica a cualquier categoría/área con esa prioridad" -- una fila más
+// específica gana. Antes de la migración 011 sólo existía priority_code,
+// así que una política ya creada sin área/categoría (NULL, NULL) sigue
+// funcionando exactamente igual que antes para quien no configuró nada
+// más específico.
+export const SLA_POLICY_RESOLUTION_SQL = `
+  SELECT id FROM sla_policies
+   WHERE priority_code = ?
+     AND (category_id = ? OR category_id IS NULL)
+     AND (business_area_id = ? OR business_area_id IS NULL)
+   ORDER BY (category_id IS NOT NULL) DESC, (business_area_id IS NOT NULL) DESC, id
+   LIMIT 1`;
