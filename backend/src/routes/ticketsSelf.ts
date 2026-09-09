@@ -9,6 +9,7 @@ import { listTeamTicketNotifications } from '../services/teamNotifications';
 import { selfTicketEditState } from '../services/selfTicketEditing';
 import { sendTicketCreationLimitError, withTicketCreationPermission } from '../services/ticketCreationLimits';
 import { validateAssetUid } from '../integrations/activosClient';
+import { TERMINAL_TICKET_STATUS_CODES_SQL, slaStateCaseSql } from '../services/slaSql';
 
 const router = Router();
 
@@ -19,17 +20,24 @@ function bearerToken(req: any) {
   return String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
 }
 
+// sla_state se expone también aquí (no sólo en /api/tickets) porque
+// alimenta la campanilla de notificaciones de Core (ver
+// MRTI/server/src/portal/notificationSources.js) -- un ticket asignado a
+// alguien que está por vencer su SLA debe destacar ahí, no sólo en el
+// dashboard operativo que esa persona quizá no tenga abierto.
 const selfTicketSelect = `SELECT t.id, t.folio, t.title, t.description, t.priority_code, t.assigned_to, t.assigned_to_name,
               t.requester_id, t.requester_name, t.created_at, t.updated_at,
               s.code AS status_code, s.name AS status_name,
               p.name AS priority_name, c.name AS category_name,
-              sc.name AS subcategory_name, b.name AS business_area_name
+              sc.name AS subcategory_name, b.name AS business_area_name,
+              ${slaStateCaseSql(TERMINAL_TICKET_STATUS_CODES_SQL)} AS sla_state
          FROM tickets t
          JOIN ticket_statuses s ON s.id = t.status_id
          LEFT JOIN ticket_priorities p ON p.code = t.priority_code
          LEFT JOIN ticket_categories c ON c.id = t.category_id
          LEFT JOIN ticket_subcategories sc ON sc.id = t.subcategory_id
-         LEFT JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)`;
+         LEFT JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)
+         LEFT JOIN sla_policies sp ON sp.id = t.sla_policy_id`;
 
 function serializeSelfTicket(ticket: any, userId: string) {
   return { ...ticket, ...selfTicketEditState(ticket, userId) };
