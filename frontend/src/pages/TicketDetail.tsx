@@ -24,7 +24,7 @@ interface RelatedAsset {
   marca?: string; modelo?: string; service_tag?: string; numero_serie?: string; estado?: string;
   unidad?: string; empresa?: string; usuario_asignado?: string;
 }
-interface SlaStatus { elapsedMinutes: number; remainingMinutes: number | null; percentConsumed: number | null; state: 'En tiempo' | 'En riesgo' | 'Vencido' | 'Pausado' | 'Cumplido' | 'Sin SLA'; deadline: string | null }
+interface SlaStatus { elapsedMinutes: number; pausedMinutes: number; remainingMinutes: number | null; percentConsumed: number | null; state: 'En tiempo' | 'En riesgo' | 'Vencido' | 'Pausado' | 'Cumplido' | 'Sin SLA'; deadline: string | null }
 
 function duration(minutes: number | null) {
   if (minutes === null) return 'No definido';
@@ -108,7 +108,10 @@ export default function TicketDetail() {
   async function addComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy('comment');
     const form = event.currentTarget; const data = new FormData(form);
-    try { await api.post(`/tickets/${id}/comments`, { content: data.get('content') }); form.reset(); await load(); }
+    try {
+      await api.post(`/tickets/${id}/comments`, { content: data.get('content'), is_private: data.get('is_private') === 'on' });
+      form.reset(); await load();
+    }
     catch (requestError: any) { setError(requestError.response?.data?.error?.message || 'No se pudo agregar el comentario'); }
     finally { setBusy(''); }
   }
@@ -162,9 +165,13 @@ export default function TicketDetail() {
           <section className="panel">
             <h2>Conversación <span className="count">{comments.length}</span></h2>
             <div className="comment-list">{comments.length ? comments.map((comment) => (
-              <article className="comment" key={comment.id}><div><strong>{comment.author_name || 'Sistema'}</strong><time>{new Date(comment.created_at).toLocaleString()}</time></div><p>{comment.content}</p></article>
+              <article className={`comment${comment.is_private ? ' comment-private' : ''}`} key={comment.id}><div><strong>{comment.author_name || 'Sistema'}</strong>{comment.is_private && <span className="comment-private-badge">Nota interna</span>}<time>{new Date(comment.created_at).toLocaleString()}</time></div><p>{comment.content}</p></article>
             )) : <p className="muted">Aún no hay comentarios.</p>}</div>
-            <form className="comment-form" onSubmit={addComment}><textarea name="content" required rows={3} placeholder="Escribe una actualización…" /><button className="button" disabled={busy === 'comment'}>{busy === 'comment' ? 'Enviando…' : 'Agregar comentario'}</button></form>
+            <form className="comment-form" onSubmit={addComment}>
+              <textarea name="content" required rows={3} placeholder="Escribe una actualización…" />
+              <label className="comment-private-toggle"><input type="checkbox" name="is_private" /> Nota interna (no visible para el solicitante)</label>
+              <button className="button" disabled={busy === 'comment'}>{busy === 'comment' ? 'Enviando…' : 'Agregar comentario'}</button>
+            </form>
           </section>
           <section className="panel">
             <h2>Archivos <span className="count">{attachments.length}</span></h2>
@@ -205,6 +212,7 @@ export default function TicketDetail() {
             {sla.percentConsumed !== null && <div className="sla-progress" aria-label={`${sla.percentConsumed}% del SLA consumido`}><span style={{ width: `${Math.max(Math.min(sla.percentConsumed, 100), 2)}%` }} /></div>}
             <div className="sla-card-meta"><span><small>Tiempo transcurrido</small><strong>{duration(sla.elapsedMinutes)}</strong></span><span><small>{sla.remainingMinutes !== null && sla.remainingMinutes < 0 ? 'Vencido hace' : 'Tiempo restante'}</small><strong>{duration(sla.remainingMinutes)}</strong></span></div>
             {sla.deadline && <p>Compromiso: {new Date(sla.deadline).toLocaleString()}</p>}
+            {sla.pausedMinutes > 0 && <p>En espera acumulada: {duration(sla.pausedMinutes)} — no cuenta contra el SLA.</p>}
           </section>}
           <section className="panel metadata"><h2>Información</h2>
             <dl><div><dt>Área</dt><dd>{ticket.business_area_name || 'Sin área'}</dd></div><div><dt>Prioridad</dt><dd>{ticket.priority_name || ticket.priority_code || 'Sin prioridad'}</dd></div><div><dt>Categorías</dt><dd>{ticket.categories?.length ? <span className="category-tag-list">{ticket.categories.map((item, index) => <span className="category-tag" key={`${item.category_id}-${item.subcategory_id ?? index}`}>{item.business_area_name ? `${item.business_area_name} · ` : ''}{item.category_name}{item.subcategory_name ? ` · ${item.subcategory_name}` : ''}</span>)}</span> : (ticket.category_name || 'Sin categoría')}</dd></div><div><dt>Origen</dt><dd>{ticket.requester_number ? `USR-${String(ticket.requester_number).padStart(6, '0')}` : 'Sin identificar'}</dd></div><div><dt>Ubicación</dt><dd>{ticket.origin_area_name || 'Sin ubicación'}<small>{[ticket.origin_site_name, ticket.origin_building_name, ticket.origin_floor_name].filter(Boolean).join(' · ')}</small></dd></div><div><dt>Equipo habitual</dt><dd>{ticket.requester_device_internal_id || '—'}<small>{ticket.requester_device_name}</small></dd></div><div><dt>Equipo afectado</dt><dd>{ticket.affected_device_internal_id || ticket.asset_number || '—'}<small>{ticket.affected_device_name}</small></dd></div><div><dt>Responsable</dt><dd>{ticket.assigned_to_name || 'Sin asignar'}</dd></div><div><dt>Creado</dt><dd>{new Date(ticket.created_at).toLocaleString()}</dd></div></dl>

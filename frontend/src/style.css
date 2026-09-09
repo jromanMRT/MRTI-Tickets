@@ -258,6 +258,9 @@ textarea { resize: vertical; }
 .comment time { color: rgb(var(--ink-faint)); font-size: .7rem; }
 .comment p { margin: 8px 0 0; color: rgb(var(--ink-soft)); line-height: 1.55; white-space: pre-wrap; }
 .comment-form { display: grid; justify-items: end; gap: 9px; margin-top: 16px; }
+.comment-private { background: rgb(var(--warning-bg)); border: 1px dashed rgb(var(--warning) / .4); }
+.comment-private-badge { align-self: center; padding: 2px 8px; border-radius: 999px; background: rgb(var(--warning) / .16); color: rgb(var(--warning)); font-size: .64rem; font-weight: 750; white-space: nowrap; }
+.comment-private-toggle { justify-self: start; display: flex; align-items: center; gap: 6px; color: rgb(var(--ink-soft)); font-size: .78rem; }
 .file-list { display: grid; gap: 8px; }
 .file-list button { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px; border: 1px solid rgb(var(--line)); border-radius: 10px; color: rgb(var(--ink)); background: rgb(var(--surface)); text-align: left; cursor: pointer; }
 .file-list small { color: rgb(var(--ink-soft)); }
@@ -358,6 +361,7 @@ textarea { resize: vertical; }
 .sla-overdue { color: rgb(var(--bad)); background: rgb(var(--bad) / .14); }
 .sla-at_risk { color: rgb(var(--warning)); background: rgb(var(--warning) / .14); }
 .sla-on_track, .sla-completed { color: rgb(var(--good-text)); background: rgb(var(--good) / .14); }
+.sla-paused { color: rgb(var(--info)); background: rgb(var(--info) / .14); }
 .unassigned-label { color: rgb(var(--warning)); font-weight: 700; }
 .activity-counts { display: flex; gap: 9px; color: rgb(var(--ink-soft)); font-size: .72rem; }
 .loading-row { padding: 28px 4px; }
@@ -375,6 +379,8 @@ textarea { resize: vertical; }
 .sla-state-vencido .sla-progress > span { background: rgb(var(--bad)); }
 .sla-state-vencido { border-color: rgb(var(--bad) / .42); }
 .sla-state-en-riesgo { border-color: rgb(var(--warning) / .42); }
+.sla-state-pausado .sla-progress > span { background: rgb(var(--info)); }
+.sla-state-pausado { border-color: rgb(var(--info) / .42); }
 .sla-card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .sla-card-meta > span { display: grid; gap: 3px; }
 .sla-card-meta small, .sla-card > p { color: rgb(var(--ink-faint)); font-size: .68rem; }

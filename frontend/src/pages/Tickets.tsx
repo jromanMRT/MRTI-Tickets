@@ -7,7 +7,7 @@ interface TicketRow {
   priority_code: string; priority_name: string; assigned_to_name?: string; requester_name?: string;
   created_at: string; updated_at: string; origin_area_name?: string; origin_site_name?: string;
   affected_device_internal_id?: string; affected_device_name?: string; business_area_name?: string;
-  sla_state: 'completed' | 'none' | 'overdue' | 'at_risk' | 'on_track'; sla_deadline?: string;
+  sla_state: 'completed' | 'none' | 'paused' | 'overdue' | 'at_risk' | 'on_track'; sla_deadline_effective?: string;
   comment_count: number; attachment_count: number;
 }
 interface Option { code: string; name: string }
@@ -17,6 +17,7 @@ interface TicketPage { items: TicketRow[]; page: number; limit: number; total: n
 const queueOptions = [
   { value: '', label: 'Todos' }, { value: 'open', label: 'Activos' }, { value: 'mine', label: 'Mis asignados' },
   { value: 'unassigned', label: 'Sin asignar' }, { value: 'overdue', label: 'SLA vencido' }, { value: 'at-risk', label: 'En riesgo' },
+  { value: 'paused', label: 'En espera' },
 ];
 
 function formatDate(value: string) {
@@ -24,7 +25,7 @@ function formatDate(value: string) {
 }
 
 function slaLabel(state: TicketRow['sla_state']) {
-  return ({ completed: 'Cumplido', none: 'Sin SLA', overdue: 'Vencido', at_risk: 'En riesgo', on_track: 'En tiempo' } as const)[state];
+  return ({ completed: 'Cumplido', none: 'Sin SLA', paused: 'Pausado', overdue: 'Vencido', at_risk: 'En riesgo', on_track: 'En tiempo' } as const)[state];
 }
 
 function Tickets() {
@@ -107,7 +108,7 @@ function Tickets() {
                 <td className="ticket-cell"><div><span className={`priority priority-${ticket.priority_code?.toLowerCase()}`}>{ticket.priority_code}</span><Link className="table-link" to={`/tickets/${ticket.id}`}>{ticket.folio}</Link></div><strong>{ticket.title}</strong><small>{ticket.origin_area_name || ticket.origin_site_name || 'Sin ubicación'}{ticket.affected_device_internal_id ? ` · ${ticket.affected_device_internal_id}` : ''}</small></td>
                 <td>{ticket.business_area_name || 'Sin área'}<small className="table-subline">{ticket.requester_name || 'Sin solicitante'}</small></td>
                 <td><span className={`status status-${ticket.status_code.toLowerCase()}`}>{ticket.status_name}</span></td>
-                <td><span className={`sla-pill sla-${ticket.sla_state}`}>{slaLabel(ticket.sla_state)}</span>{ticket.sla_deadline && !['completed', 'none'].includes(ticket.sla_state) && <small className="table-subline">{formatDate(ticket.sla_deadline)}</small>}</td>
+                <td><span className={`sla-pill sla-${ticket.sla_state}`}>{slaLabel(ticket.sla_state)}</span>{ticket.sla_deadline_effective && !['completed', 'none', 'paused'].includes(ticket.sla_state) && <small className="table-subline">{formatDate(ticket.sla_deadline_effective)}</small>}</td>
                 <td>{ticket.assigned_to_name || <span className="unassigned-label">Sin asignar</span>}</td>
                 <td><span className="activity-counts"><span title="Comentarios">◌ {ticket.comment_count}</span><span title="Adjuntos">⌕ {ticket.attachment_count}</span></span><small className="table-subline">{formatDate(ticket.updated_at)}</small></td>
               </tr>

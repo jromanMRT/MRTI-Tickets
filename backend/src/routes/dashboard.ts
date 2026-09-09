@@ -2,9 +2,10 @@ import { Router } from 'express';
 import pool from '../config/db';
 import { requireAuth } from '../middlewares/auth';
 import { getTicketAreaScope } from '../services/ticketAreaAccess';
+import { TERMINAL_TICKET_STATUS_CODES_SQL, slaIsAtRiskSql, slaIsOverdueSql, slaStateCaseSql } from '../services/slaSql';
 
 const router = Router();
-const terminalStatuses = "'RESOLVED','CLOSED','CANCELLED'";
+const terminalStatuses = TERMINAL_TICKET_STATUS_CODES_SQL;
 
 router.get('/summary', requireAuth, async (req, res) => {
   try {
@@ -17,9 +18,8 @@ router.get('/summary', requireAuth, async (req, res) => {
         SUM(s.code IN ('ON_HOLD_USER','ON_HOLD_VENDOR')) AS waiting,
         SUM(s.code = 'RESOLVED') AS resolved, SUM(s.code = 'CLOSED') AS closed,
         SUM(t.assigned_to IS NULL AND s.code NOT IN (${terminalStatuses})) AS unassigned,
-        SUM(sp.id IS NOT NULL AND s.code NOT IN (${terminalStatuses}) AND DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) < NOW()) AS overdue,
-        SUM(sp.id IS NOT NULL AND s.code NOT IN (${terminalStatuses}) AND DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) >= NOW()
-          AND DATE_ADD(t.created_at, INTERVAL FLOOR(sp.resolution_minutes * .8) MINUTE) <= NOW()) AS at_risk,
+        SUM(s.code NOT IN (${terminalStatuses}) AND ${slaIsOverdueSql()}) AS overdue,
+        SUM(s.code NOT IN (${terminalStatuses}) AND ${slaIsAtRiskSql()}) AS at_risk,
         ROUND(AVG(CASE WHEN s.code NOT IN (${terminalStatuses}) THEN TIMESTAMPDIFF(MINUTE, t.created_at, NOW()) / 60 END), 1) AS average_open_age_hours
        FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id
        LEFT JOIN ticket_categories c ON c.id = t.category_id LEFT JOIN sla_policies sp ON sp.id = t.sla_policy_id
@@ -30,7 +30,7 @@ router.get('/summary', requireAuth, async (req, res) => {
        WHERE t.deleted_at IS NULL AND ${scope.sql} AND s.code NOT IN (${terminalStatuses})
        GROUP BY t.priority_code, p.name ORDER BY FIELD(t.priority_code, 'P1','P2','P3','P4')`),
       query(`SELECT b.id, COALESCE(b.name, 'Sin área') AS name, COUNT(*) AS \`open\`,
-        SUM(sp.id IS NOT NULL AND DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) < NOW()) AS overdue
+        SUM(${slaIsOverdueSql()}) AS overdue
        FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id
        LEFT JOIN ticket_categories c ON c.id = t.category_id
        LEFT JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)
@@ -44,8 +44,7 @@ router.get('/summary', requireAuth, async (req, res) => {
        GROUP BY t.assigned_to, t.assigned_to_name ORDER BY \`open\` DESC, name LIMIT 8`),
       query(`SELECT t.id, t.folio, t.title, t.priority_code, t.assigned_to_name, t.created_at, t.updated_at,
         s.code AS status_code, s.name AS status_name, COALESCE(b.name, 'Sin área') AS business_area_name,
-        CASE WHEN sp.id IS NULL THEN 'none' WHEN DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) < NOW() THEN 'overdue'
-          WHEN DATE_ADD(t.created_at, INTERVAL FLOOR(sp.resolution_minutes * .8) MINUTE) <= NOW() THEN 'at_risk' ELSE 'on_track' END AS sla_state
+        ${slaStateCaseSql(terminalStatuses)} AS sla_state
        FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id LEFT JOIN ticket_categories c ON c.id = t.category_id
        LEFT JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)
        LEFT JOIN sla_policies sp ON sp.id = t.sla_policy_id

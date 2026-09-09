@@ -113,7 +113,7 @@ function Dashboard() {
           <Link to={`/tickets/${ticket.id}`} key={ticket.id} className="ticket-feed-row">
             <span className={`priority priority-${ticket.priority_code?.toLowerCase()}`}>{ticket.priority_code}</span>
             <span className="ticket-feed-main"><strong>{ticket.folio} · {ticket.title}</strong><small>{ticket.business_area_name} · {ticket.assigned_to_name || 'Sin asignar'} · Actualizado {shortDate(ticket.updated_at)}</small></span>
-            <span className={`sla-pill sla-${ticket.sla_state}`}>{ticket.sla_state === 'overdue' ? 'SLA vencido' : ticket.sla_state === 'at_risk' ? 'En riesgo' : ticket.sla_state === 'on_track' ? 'En tiempo' : 'Sin SLA'}</span>
+            <span className={`sla-pill sla-${ticket.sla_state}`}>{ticket.sla_state === 'overdue' ? 'SLA vencido' : ticket.sla_state === 'at_risk' ? 'En riesgo' : ticket.sla_state === 'paused' ? 'Pausado' : ticket.sla_state === 'on_track' ? 'En tiempo' : 'Sin SLA'}</span>
             <span className={`status status-${ticket.status_code.toLowerCase()}`}>{ticket.status_name}</span>
           </Link>
         ))}</div> : <div className="empty-state compact"><h2>La bandeja está al día</h2><p>No existen tickets activos pendientes.</p></div>}

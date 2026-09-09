@@ -7,6 +7,8 @@ import { getTicketContext } from '../integrations/coreClient';
 import { getTicketAreaScope, requireTicketAreaAccess, validateTicketClassification } from '../services/ticketAreaAccess';
 import { sendTicketCreationLimitError, withTicketCreationPermission } from '../services/ticketCreationLimits';
 import { validateAssetUid } from '../integrations/activosClient';
+import { applySlaPauseTransition } from '../services/slaService';
+import { SLA_DEADLINE_SQL, TERMINAL_TICKET_STATUS_CODES_SQL, slaIsAtRiskSql, slaIsOverdueSql, slaStateCaseSql } from '../services/slaSql';
 
 const router = Router();
 
@@ -53,7 +55,7 @@ router.get('/', requireAuth, async (req, res) => {
     clauses.push('t.asset_uid = ?');
     params.push(String(req.query.asset_uid));
   }
-  const terminalStatuses = "'RESOLVED','CLOSED','CANCELLED'";
+  const terminalStatuses = TERMINAL_TICKET_STATUS_CODES_SQL;
   const scope = String(req.query.scope || '');
   if (scope === 'open') clauses.push(`s.code NOT IN (${terminalStatuses})`);
   if (scope === 'mine') {
@@ -61,8 +63,9 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(String(req.user?.id || ''));
   }
   if (scope === 'unassigned') clauses.push(`t.assigned_to IS NULL AND s.code NOT IN (${terminalStatuses})`);
-  if (scope === 'overdue') clauses.push(`sp.id IS NOT NULL AND s.code NOT IN (${terminalStatuses}) AND DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) < NOW()`);
-  if (scope === 'at-risk') clauses.push(`sp.id IS NOT NULL AND s.code NOT IN (${terminalStatuses}) AND DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) >= NOW() AND DATE_ADD(t.created_at, INTERVAL FLOOR(sp.resolution_minutes * .8) MINUTE) <= NOW()`);
+  if (scope === 'overdue') clauses.push(`s.code NOT IN (${terminalStatuses}) AND ${slaIsOverdueSql()}`);
+  if (scope === 'at-risk') clauses.push(`s.code NOT IN (${terminalStatuses}) AND ${slaIsAtRiskSql()}`);
+  if (scope === 'paused') clauses.push(`s.code NOT IN (${terminalStatuses}) AND t.sla_paused_since IS NOT NULL`);
   if (req.query.q) {
     clauses.push('(t.folio LIKE ? OR t.title LIKE ? OR t.requester_name LIKE ? OR t.origin_area_name LIKE ? OR t.affected_device_internal_id LIKE ?)');
     const search = `%${String(req.query.q).trim()}%`;
@@ -75,7 +78,7 @@ router.get('/', requireAuth, async (req, res) => {
     updated: 't.updated_at DESC',
     oldest: 't.created_at ASC',
     priority: "FIELD(t.priority_code, 'P1','P2','P3','P4'), t.created_at ASC",
-    sla: "COALESCE(DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE), '9999-12-31') ASC",
+    sla: "COALESCE(sla_deadline_effective, '9999-12-31') ASC",
   };
   const orderBy = sortOptions[String(req.query.sort || '')] || sortOptions.updated;
   try {
@@ -87,14 +90,9 @@ router.get('/', requireAuth, async (req, res) => {
               s.code AS status_code, s.name AS status_name,
               p.name AS priority_name,
               COALESCE(t.business_area_id, c.business_area_id) AS business_area_id, b.name AS business_area_name,
-              DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) AS sla_deadline,
-              CASE
-                WHEN s.code IN (${terminalStatuses}) THEN 'completed'
-                WHEN sp.id IS NULL THEN 'none'
-                WHEN DATE_ADD(t.created_at, INTERVAL sp.resolution_minutes MINUTE) < NOW() THEN 'overdue'
-                WHEN DATE_ADD(t.created_at, INTERVAL FLOOR(sp.resolution_minutes * .8) MINUTE) <= NOW() THEN 'at_risk'
-                ELSE 'on_track'
-              END AS sla_state,
+              ${SLA_DEADLINE_SQL} AS sla_deadline_effective,
+              (t.sla_paused_since IS NOT NULL) AS sla_is_paused,
+              ${slaStateCaseSql(terminalStatuses)} AS sla_state,
               (SELECT COUNT(*) FROM ticket_comments tc WHERE tc.ticket_id = t.id) AS comment_count,
               (SELECT COUNT(*) FROM ticket_attachments ta WHERE ta.ticket_id = t.id) AS attachment_count
          FROM tickets t
@@ -244,7 +242,10 @@ router.patch('/:id/status', requireAuth, requireTicketAreaAccess, async (req, re
       await connection.rollback();
       return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'Estado inválido' } });
     }
-    const [currentRows]: any = await connection.query('SELECT status_id FROM tickets WHERE id = ? AND deleted_at IS NULL LIMIT 1', [ticketId]);
+    const [currentRows]: any = await connection.query(
+      `SELECT t.status_id, s.code AS status_code FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id WHERE t.id = ? AND t.deleted_at IS NULL LIMIT 1`,
+      [ticketId]
+    );
     if (!currentRows.length) {
       await connection.rollback();
       return res.status(404).json({ success: false, error: { code: 'TICKET_NOT_FOUND', message: 'No se encontró el ticket' } });
@@ -255,6 +256,9 @@ router.patch('/:id/status', requireAuth, requireTicketAreaAccess, async (req, re
       'INSERT INTO ticket_status_history (ticket_id, from_status_id, to_status_id, changed_by, comment) VALUES (?,?,?,?,?)',
       [ticketId, currentRows[0].status_id, toStatusId, req.user?.id || null, comment || null]
     );
+    // Pausar/reanudar el SLA es parte del mismo cambio de estado: se
+    // confirma o se revierte junto con él (ver services/slaService.ts).
+    await applySlaPauseTransition(connection, ticketId, currentRows[0].status_code, String(to_status_code));
     await connection.commit();
     res.json({ success: true, message: 'Estado actualizado' });
   } catch (err) {
