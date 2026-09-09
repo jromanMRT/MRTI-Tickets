@@ -179,7 +179,17 @@ CREATE TABLE IF NOT EXISTS automatic_event_correlations (
   FOREIGN KEY (ticket_id) REFERENCES tickets(id)
 );
 
--- Indexes
-CREATE INDEX idx_tickets_status ON tickets(status_id);
-CREATE INDEX idx_tickets_assigned ON tickets(assigned_to);
-CREATE INDEX idx_tickets_folio ON tickets(folio);
+-- Indexes (condicionados: a diferencia de CREATE TABLE, MySQL no admite
+-- CREATE INDEX IF NOT EXISTS, y este archivo debe poder ejecutarse más de
+-- una vez sin fallar -- ver backend/scripts/run-migrations.js).
+SET @idx_status = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'tickets' AND index_name = 'idx_tickets_status');
+SET @sql_idx_status = IF(@idx_status = 0, 'CREATE INDEX idx_tickets_status ON tickets(status_id)', 'SELECT 1');
+PREPARE stmt_idx_status FROM @sql_idx_status; EXECUTE stmt_idx_status; DEALLOCATE PREPARE stmt_idx_status;
+
+SET @idx_assigned = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'tickets' AND index_name = 'idx_tickets_assigned');
+SET @sql_idx_assigned = IF(@idx_assigned = 0, 'CREATE INDEX idx_tickets_assigned ON tickets(assigned_to)', 'SELECT 1');
+PREPARE stmt_idx_assigned FROM @sql_idx_assigned; EXECUTE stmt_idx_assigned; DEALLOCATE PREPARE stmt_idx_assigned;
+
+SET @idx_folio = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'tickets' AND index_name = 'idx_tickets_folio');
+SET @sql_idx_folio = IF(@idx_folio = 0, 'CREATE INDEX idx_tickets_folio ON tickets(folio)', 'SELECT 1');
+PREPARE stmt_idx_folio FROM @sql_idx_folio; EXECUTE stmt_idx_folio; DEALLOCATE PREPARE stmt_idx_folio;
