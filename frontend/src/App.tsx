@@ -5,6 +5,7 @@ import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
 import NewTicket from './pages/NewTicket';
 import SlaPolicies from './pages/SlaPolicies';
+import KnowledgeBase from './pages/KnowledgeBase';
 import api from './services/api';
 import { useTheme } from './hooks/useTheme';
 import { PortalNotifications } from './components/PortalNotifications';
@@ -53,6 +54,8 @@ function App() {
       ? 'Nuevo ticket'
       : location.pathname === '/settings/sla-policies'
         ? 'Políticas de SLA'
+      : location.pathname === '/knowledge-base'
+        ? 'Base de conocimiento'
       : location.pathname.startsWith('/tickets/')
         ? 'Detalle del ticket'
         : 'Tickets';
@@ -129,6 +132,7 @@ function App() {
           <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>
           <NavLink to="/tickets" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">◇</span><span className="nav-label">Tickets</span></NavLink>
           <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nuevo ticket</span></NavLink>
+          <NavLink to="/knowledge-base" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">📘</span><span className="nav-label">Base de conocimiento</span></NavLink>
           {profile.role === 'administrator' && <NavLink to="/settings/sla-policies" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⏱</span><span className="nav-label">Políticas de SLA</span></NavLink>}
         </nav>
         <div className="sidebar-footer">
@@ -164,6 +168,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/tickets/new" element={<NewTicket />} />
+          <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/tickets/:id" element={<TicketDetail />} />
           <Route path="/settings/sla-policies" element={<SlaPolicies />} />
           <Route path="/settings/area-teams" element={<div className="page-stack narrow"><section className="panel empty-state"><h1>Equipos de atención</h1><p>Esta configuración se trasladó al Centro de control de Core.</p><a className="button" href="/">Abrir Core</a></section></div>} />

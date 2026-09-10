@@ -64,7 +64,7 @@ export function requirePermission(permission: string) {
     const rolePermissions: Record<string, string[]> = {
       administrador: ['*'],
       administrator: ['*'],
-      supervisor: ['Asignar tickets', 'Consultar reportes', 'Agregar notas internas'],
+      supervisor: ['Asignar tickets', 'Consultar reportes', 'Agregar notas internas', 'Administrar base de conocimiento'],
       técnico: ['Asignar tickets', 'Agregar notas internas'],
       technician: ['Asignar tickets', 'Agregar notas internas'],
     };

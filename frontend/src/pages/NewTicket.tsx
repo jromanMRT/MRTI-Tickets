@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
+interface KbSuggestion { id: number; title: string; snippet: string }
+
 interface BusinessArea { id: number; name: string; code: string }
 interface Category { id: number; name: string; business_area_id: number | null; business_area_name?: string }
 interface Subcategory { id: number; category_id: number; name: string }
@@ -27,6 +29,7 @@ export default function NewTicket() {
   const [error, setError] = useState('');
   const [context, setContext] = useState<TicketContext | null>(null);
   const [affectedDeviceId, setAffectedDeviceId] = useState('');
+  const [kbSuggestions, setKbSuggestions] = useState<KbSuggestion[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -41,6 +44,18 @@ export default function NewTicket() {
         setAffectedDeviceId(nextContext.primary_device?.id || '');
       }).catch(() => setError('No se pudieron cargar los catálogos'));
   }, []);
+
+  // Sugerencias de la base de conocimiento para la categoría/subcategoría
+  // elegida -- puramente informativo, un fallo aquí nunca debe bloquear la
+  // creación del ticket (ver el .catch silencioso).
+  useEffect(() => {
+    if (!categoryId) { setKbSuggestions([]); return; }
+    const params = new URLSearchParams({ category_id: categoryId });
+    if (subcategoryId) params.set('subcategory_id', subcategoryId);
+    api.get(`/kb-articles?${params}`)
+      .then((res) => setKbSuggestions(res.data.data))
+      .catch(() => setKbSuggestions([]));
+  }, [categoryId, subcategoryId]);
 
   function categoriesForArea(areaId: string) {
     return categories.filter((item) => String(item.business_area_id ?? '') === areaId);
@@ -81,6 +96,16 @@ export default function NewTicket() {
             <label>Detalle<select value={subcategoryId} disabled={!subcategoriesForCategory(categoryId).length} onChange={(event) => setSubcategoryId(event.target.value)}><option value="">{subcategoriesForCategory(categoryId).length ? 'Seleccionar detalle' : 'Sin detalle adicional'}</option>{subcategoriesForCategory(categoryId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           </div>
         </div>
+        {kbSuggestions.length > 0 && (
+          <div className="full kb-suggestions">
+            <small className="category-picker-label">Puede que esto ya resuelva tu problema</small>
+            <ul>
+              {kbSuggestions.map((article) => (
+                <li key={article.id}><Link to={`/knowledge-base?open=${article.id}`} target="_blank" rel="noreferrer">{article.title}</Link><small>{article.snippet}…</small></li>
+              ))}
+            </ul>
+          </div>
+        )}
         <label className="full">Prioridad<select name="priority_code" defaultValue="P3">{priorities.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.name}</option>)}</select></label>
         <label className="full">Equipo afectado<select name="affected_device_id" value={affectedDeviceId} onChange={(event) => setAffectedDeviceId(event.target.value)} disabled={!context?.area_devices.length}><option value="">Sin equipo específico</option>{context?.area_devices.map((device) => <option key={device.id} value={device.id}>{device.internal_id} · {device.name}{device.id === context.primary_device?.id ? ' · habitual' : ''}</option>)}</select><small>Sólo aparecen equipos registrados en tu misma área física.</small></label>
         {error && <div className="form-error full">{error}</div>}
