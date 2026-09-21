@@ -17,5 +17,5 @@ export function ModuleSwitcher() {
       .then(({ data }) => setApplications(Array.isArray(data) ? data : []))
       .catch(() => setApplications([]));
   }, []);
-  return <label className="header-module-switcher"><span>Cambiar módulo</span><select value="" onChange={(event) => { if (event.target.value) window.location.assign(event.target.value); }} aria-label="Cambiar de módulo"><option value="" disabled>MRTI Tickets</option><option value="/">Mi espacio</option>{applications.filter((application) => application.code !== 'tickets').map((application) => <option key={application.code} value={applicationHref(application)}>{application.name}</option>)}</select></label>;
+  return <label className="header-module-switcher"><span>Cambiar módulo</span><select value="" onChange={(event) => { if (event.target.value) window.location.assign(event.target.value); }} aria-label="Cambiar de módulo"><option value="" disabled>MRTI Tickets</option><option value="/mi-espacio">Mi espacio</option>{applications.filter((application) => application.code !== 'tickets').map((application) => <option key={application.code} value={applicationHref(application)}>{application.name}</option>)}</select></label>;
 }

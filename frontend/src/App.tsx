@@ -126,7 +126,7 @@ function App() {
       <button className="sidebar-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación" />
       <aside className="sidebar" id="tickets-sidebar" aria-label="Navegación de Tickets">
         <div className="brand-row">
-          <a href="/" title="Ir a MRTI Core" aria-label="Ir a MRTI Core" className="brand-home"><span className="brand-mark"><img src={logoUrl} alt="" /></span><span className="brand-text"><strong><span>MRTI</span><span className="brand-module">Tickets</span></strong><small>Minera Río Tinto</small></span></a>
+          <a href="/mi-espacio" title="Ir a MRTI Core" aria-label="Ir a MRTI Core" className="brand-home"><span className="brand-mark"><img src={logoUrl} alt="" /></span><span className="brand-text"><strong><span>MRTI</span><span className="brand-module">Tickets</span></strong><small>Minera Río Tinto</small></span></a>
         </div>
         <nav>
           <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>
@@ -171,7 +171,7 @@ function App() {
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/tickets/:id" element={<TicketDetail />} />
           <Route path="/settings/sla-policies" element={<SlaPolicies />} />
-          <Route path="/settings/area-teams" element={<div className="page-stack narrow"><section className="panel empty-state"><h1>Equipos de atención</h1><p>Esta configuración se trasladó al Centro de control de Core.</p><a className="button" href="/">Abrir Core</a></section></div>} />
+          <Route path="/settings/area-teams" element={<div className="page-stack narrow"><section className="panel empty-state"><h1>Equipos de atención</h1><p>Esta configuración se trasladó al Centro de control de Core.</p><a className="button" href="/mi-espacio?view=control-center&panel=ticket-teams">Abrir Core</a></section></div>} />
         </Routes>
       </main>
     </div>
