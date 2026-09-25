@@ -33,7 +33,7 @@ services:
       - AUTH_PROFILE_URL=http://host.docker.internal:3005/api/auth/me
       - AUTH_TICKET_CONTEXT_URL=http://host.docker.internal:3005/api/auth/ticket-context
       - AUTH_ASSIGNEES_URL=http://host.docker.internal:3005/api/auth/assignees
-      - AGENT_API_KEY=changeme
+      - AGENT_API_KEY=ff8a81dea344cd3887e1897fd1d4cca3ac08e80b61de048a141e2f8dcaa9eb21
       - CORE_NOTIFICATION_URL=http://host.docker.internal:3002/api/notifications
       # Llamadas de servicio hacia Activos/Infra sin usuario navegando (Fase 1
       # de la integración de plataforma) -- mismo valor que INTERNAL_SERVICE_KEY
