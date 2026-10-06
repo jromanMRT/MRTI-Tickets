@@ -38,7 +38,7 @@ La publicación se puede repetir sin operaciones sobre datos.
   `../run/ticket-equipment-20261006/` desde el workspace.
 - No se crean usuarios, tickets ni asignaciones de prueba en producción.
 
-## Publicación y rollback
+## Publicación, smoke y rollback
 
 Orden: backend Core (expansión compatible), backend Tickets, frontend
 Tickets y frontend Core. Se conservan las dependencias Docker existentes
@@ -49,6 +49,15 @@ del cambio. No se reinstalan paquetes ni se cambia la base de datos.
 Respaldo Docker previo al cambio:
 `mrti-tickets-backend:before-equipment-20261006` y
 `mrti-tickets-frontend:before-equipment-20261006`.
+
+Publicado el 2026-10-06: las imágenes nuevas se construyeron a partir de esos
+respaldos, copiando únicamente los `src/` y `dist/` ya verificados. Los
+contenedores `backend` y `frontend` se recrearon sin tocar MySQL. Smoke por
+Nginx: `/tickets/tickets/new` 200, `/tickets-api/api/health` 200 y el contexto
+de Tickets sin sesión 401. Core quedó reiniciado y publicó su release
+`20261006-150447-3f0fa35`; `/api/health` 200 y `ticket-context` sin sesión
+401. La inspección de los contenedores confirmó el backend nuevo y el bundle
+del selector administrativo. No se crearon usuarios, tickets ni asignaciones.
 
 Para volver a las imágenes previas, desde MRTI-Tickets:
 
