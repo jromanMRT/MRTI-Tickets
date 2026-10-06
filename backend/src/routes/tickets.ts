@@ -1,3 +1,4 @@
+import { resolveAdminEquipment, TicketEquipmentError } from '../services/ticketEquipment';
 import { Router } from 'express';
 import pool from '../config/db';
 import { requireAuth } from '../middlewares/auth';
@@ -138,7 +139,8 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: { code: classification.code, message: classification.message } });
     }
     const context = await getTicketContext(bearerToken(req));
-    const requestedDeviceId = String(req.body.affected_device_id || req.body.related_device_id || context?.primary_device?.id || '').trim() || null;
+    const equipment = resolveAdminEquipment(req.user, context, req.body);
+    const requestedDeviceId = equipment ? null : String(req.body.affected_device_id ?? req.body.related_device_id ?? context?.primary_device?.id ?? '').trim() || null;
     const affectedDevice = requestedDeviceId
       ? context?.area_devices?.find((device: any) => device.id === requestedDeviceId)
       : null;
@@ -152,7 +154,7 @@ router.post('/', requireAuth, async (req, res) => {
     // activo en MRTI-Activos) -- si viene, se valida contra Activos antes de
     // guardarlo; "no existe" se rechaza, "Activos no disponible" no bloquea
     // la creación (se guarda sin verificar, ver activosClient.ts).
-    const requestedAssetUid = String(req.body.asset_uid || '').trim() || null;
+    const requestedAssetUid = equipment ? equipment.asset_uid : String(req.body.asset_uid || '').trim() || null;
     if (requestedAssetUid) {
       const validation = await validateAssetUid(requestedAssetUid, { userToken: bearerToken(req) });
       if (validation.status === 'not_found') {
@@ -180,6 +182,7 @@ router.post('/', requireAuth, async (req, res) => {
       requester_device_name: primaryDevice?.name || null,
       affected_device_internal_id: affectedDevice?.internal_id || null,
       affected_device_name: affectedDevice?.name || null,
+      ...(equipment || {}),
       origin_site_id: location?.site_id || null,
       origin_site_name: location?.site_name || null,
       origin_building_name: location?.building_name || null,
@@ -191,6 +194,7 @@ router.post('/', requireAuth, async (req, res) => {
     await logAudit(req.user?.id || null, req.user?.name || null, 'ticket.create', 'ticket', ticket.id, null, ticket);
     res.status(201).json({ success: true, data: ticket, message: 'Ticket creado correctamente' });
   } catch (err) {
+    if (err instanceof TicketEquipmentError) return res.status(err.status).json({ success: false, error: { code: err.code, message: err.message } });
     console.error(err);
     if (sendTicketCreationLimitError(res, err)) return;
     res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al crear el ticket' } });

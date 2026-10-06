@@ -1,3 +1,4 @@
+import { resolveAdminEquipment, TicketEquipmentError } from '../services/ticketEquipment';
 import { Router } from 'express';
 import pool from '../config/db';
 import { requireCoreAuth } from '../middlewares/auth';
@@ -27,6 +28,7 @@ function bearerToken(req: any) {
 // dashboard operativo que esa persona quizá no tenga abierto.
 const selfTicketSelect = `SELECT t.id, t.folio, t.title, t.description, t.priority_code, t.assigned_to, t.assigned_to_name,
               t.requester_id, t.requester_name, t.created_at, t.updated_at,
+              t.asset_uid, t.asset_number, t.affected_device_internal_id, t.affected_device_name,
               s.code AS status_code, s.name AS status_name,
               p.name AS priority_name, c.name AS category_name,
               sc.name AS subcategory_name, b.name AS business_area_name,
@@ -185,12 +187,13 @@ router.post('/', requireCoreAuth, async (req, res) => {
     if (!priorities.length) return res.status(400).json({ success: false, error: { code: 'INVALID_PRIORITY', message: 'La prioridad seleccionada no está disponible' } });
 
     const context = await getTicketContext(bearerToken(req));
+    const equipment = resolveAdminEquipment(req.user, context, req.body);
     const primaryDevice = context?.primary_device || null;
     const location = context?.location || null;
 
     // asset_uid opcional: botón "Crear ticket" desde el popup de un activo
     // en MRTI-Activos (Core abre este formulario con ?openTicket=1&asset_uid=...).
-    const requestedAssetUid = String(req.body?.asset_uid || '').trim() || null;
+    const requestedAssetUid = equipment ? equipment.asset_uid : String(req.body?.asset_uid || '').trim() || null;
     if (requestedAssetUid) {
       const validation = await validateAssetUid(requestedAssetUid, { userToken: bearerToken(req) });
       if (validation.status === 'not_found') {
@@ -207,6 +210,7 @@ router.post('/', requireCoreAuth, async (req, res) => {
       categories: [{ category_id: categoryId, subcategory_id: subcategoryId }],
       priority_code: priorityCode,
       asset_uid: requestedAssetUid,
+      ...(equipment || {}),
       requester_id: userId,
       requester_name: req.user?.name || req.user?.full_name || null,
       requester_email: req.user?.email || null,
@@ -225,6 +229,7 @@ router.post('/', requireCoreAuth, async (req, res) => {
     await logAudit(userId, req.user?.name || req.user?.full_name || null, 'ticket.self.create', 'ticket', ticket.id, null, ticket);
     res.status(201).json({ success: true, data: ticket, message: 'Ticket enviado correctamente' });
   } catch (err) {
+    if (err instanceof TicketEquipmentError) return res.status(err.status).json({ success: false, error: { code: err.code, message: err.message } });
     console.error(err);
     if (sendTicketCreationLimitError(res, err)) return;
     res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al crear el ticket' } });

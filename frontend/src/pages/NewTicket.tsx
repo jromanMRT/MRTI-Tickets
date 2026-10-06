@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import TicketEquipmentPicker, { EquipmentOption } from './TicketEquipmentPicker';
 
 interface KbSuggestion { id: number; title: string; snippet: string }
 
@@ -14,6 +15,8 @@ interface TicketContext {
   location: null | { site_name: string; building_name: string; floor_name: string; area_name: string };
   primary_device: ContextDevice | null;
   area_devices: ContextDevice[];
+  can_select_any_equipment?: boolean;
+  equipment_options?: EquipmentOption[];
 }
 
 export default function NewTicket() {
@@ -29,6 +32,7 @@ export default function NewTicket() {
   const [error, setError] = useState('');
   const [context, setContext] = useState<TicketContext | null>(null);
   const [affectedDeviceId, setAffectedDeviceId] = useState('');
+  const [equipmentKey, setEquipmentKey] = useState('');
   const [kbSuggestions, setKbSuggestions] = useState<KbSuggestion[]>([]);
 
   useEffect(() => {
@@ -42,6 +46,7 @@ export default function NewTicket() {
         const nextContext = contextResponse.data.data as TicketContext;
         setContext(nextContext);
         setAffectedDeviceId(nextContext.primary_device?.id || '');
+        setEquipmentKey(nextContext.equipment_options?.find((item) => item.device_id && item.device_id === nextContext.primary_device?.id)?.key || '');
       }).catch(() => setError('No se pudieron cargar los catálogos'));
   }, []);
 
@@ -107,7 +112,7 @@ export default function NewTicket() {
           </div>
         )}
         <label className="full">Prioridad<select name="priority_code" defaultValue="P3">{priorities.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.name}</option>)}</select></label>
-        <label className="full">Equipo afectado<select name="affected_device_id" value={affectedDeviceId} onChange={(event) => setAffectedDeviceId(event.target.value)} disabled={!context?.area_devices.length}><option value="">Sin equipo específico</option>{context?.area_devices.map((device) => <option key={device.id} value={device.id}>{device.internal_id} · {device.name}{device.id === context.primary_device?.id ? ' · habitual' : ''}</option>)}</select><small>Sólo aparecen equipos registrados en tu misma área física.</small></label>
+        {context?.can_select_any_equipment ? <TicketEquipmentPicker options={context.equipment_options || []} value={equipmentKey} onChange={setEquipmentKey} /> : <label className="full">Equipo afectado<select name="affected_device_id" value={affectedDeviceId} onChange={(event) => setAffectedDeviceId(event.target.value)} disabled={!context?.area_devices.length}><option value="">Sin equipo específico</option>{context?.area_devices.map((device) => <option key={device.id} value={device.id}>{device.internal_id} · {device.name}{device.id === context.primary_device?.id ? ' · habitual' : ''}</option>)}</select><small>Sólo aparecen equipos registrados en tu misma área física.</small></label>}
         {error && <div className="form-error full">{error}</div>}
         <div className="form-actions full"><Link className="button ghost" to="/tickets">Cancelar</Link><button className="button" disabled={saving}>{saving ? 'Guardando…' : 'Crear ticket'}</button></div>
       </form>
