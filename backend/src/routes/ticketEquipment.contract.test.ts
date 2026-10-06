@@ -55,7 +55,7 @@ describe.each(['/tickets', '/self'])('contrato HTTP %s', (route) => {
     expect(createTicket).not.toHaveBeenCalled();
   });
   it('el cliente anterior sigue creando tickets', async () => {
-    const { affected_equipment, ...legacy } = payload;
+    const legacy = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== 'affected_equipment'));
     expect((await request(app).post(route).set('Authorization', 'Bearer viewer').send(legacy)).status).toBe(201);
   });
 });

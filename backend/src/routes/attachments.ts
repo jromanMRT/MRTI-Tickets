@@ -6,11 +6,10 @@ import { saveAttachment } from '../services/storage';
 import pool from '../config/db';
 import { logAudit } from '../services/audit';
 import { requireTicketAreaAccess } from '../services/ticketAreaAccess';
+import { safeDownloadFilename, validateAttachment } from '../services/attachmentValidation';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const router = Router({ mergeParams: true });
-
-const allowed = (process.env.ATTACHMENTS_ALLOW || 'image/jpeg,image/png,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip').split(',');
 
 router.get('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
   try {
@@ -27,8 +26,9 @@ router.get('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
 
 router.post('/', requireAuth, requireTicketAreaAccess, upload.single('file'), async (req, res) => {
   const ticketId = Number(req.params.id);
-  if (!req.file) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'File required' } });
-  if (!allowed.includes(req.file.mimetype)) return res.status(400).json({ success: false, error: { code: 'INVALID_FILE', message: 'Tipo de archivo no permitido' } });
+  if (!req.file) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Selecciona un archivo' } });
+  const validation = validateAttachment(req.file.originalname, req.file.mimetype, req.file.buffer);
+  if (!validation.valid) return res.status(400).json({ success: false, error: { code: 'INVALID_FILE', message: validation.message } });
 
   try {
     const saved = await saveAttachment(req.file.originalname, req.file.buffer, req.file.mimetype);
@@ -52,7 +52,7 @@ router.get('/:attachmentId', requireAuth, requireTicketAreaAccess, async (req, r
     if (!rows || rows.length === 0) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Attachment not found' } });
     const att = rows[0];
     // Send file
-    return res.sendFile(att.storage_path, { headers: { 'Content-Type': att.mime_type, 'Content-Disposition': `attachment; filename="${att.filename}"` } }, (err) => {
+    return res.sendFile(att.storage_path, { headers: { 'Content-Type': att.mime_type, 'Content-Disposition': `attachment; filename="${safeDownloadFilename(att.filename)}"`, 'X-Content-Type-Options': 'nosniff' } }, (err) => {
       if (err) {
         // eslint-disable-next-line no-console
         console.error('sendFile error', err);

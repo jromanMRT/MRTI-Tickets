@@ -21,7 +21,9 @@ router.get('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
 router.post('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const ticketId = Number(req.params.id);
   const { content, is_private } = req.body;
-  if (!content) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Content required' } });
+  const normalizedContent = String(content || '').trim();
+  if (!normalizedContent) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Escribe un comentario' } });
+  if (normalizedContent.length > 5000) return res.status(400).json({ success: false, error: { code: 'COMMENT_TOO_LONG', message: 'El comentario no puede exceder 5000 caracteres' } });
 
   const authorId = (req.user && req.user.id) || null;
   const authorName = (req.user && (req.user.name || req.user.fullname)) || null;
@@ -36,8 +38,8 @@ router.post('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
   }
 
   try {
-    const [result]: any = await pool.query('INSERT INTO ticket_comments (ticket_id, author_id, author_name, is_private, content) VALUES (?,?,?,?,?)', [ticketId, authorId, authorName, is_private ? 1 : 0, content]);
-    await logAudit(authorId, authorName, 'comment.create', 'ticket_comment', result.insertId, null, { ticket_id: ticketId, is_private: !!is_private, content });
+    const [result]: any = await pool.query('INSERT INTO ticket_comments (ticket_id, author_id, author_name, is_private, content) VALUES (?,?,?,?,?)', [ticketId, authorId, authorName, is_private ? 1 : 0, normalizedContent]);
+    await logAudit(authorId, authorName, 'comment.create', 'ticket_comment', result.insertId, null, { ticket_id: ticketId, is_private: !!is_private, content: normalizedContent });
     const [rows]: any = await pool.query('SELECT id, author_id, author_name, is_private, content, edited_at, created_at FROM ticket_comments WHERE id = ? LIMIT 1', [result.insertId]);
     res.status(201).json({ success: true, data: rows[0] });
   } catch (err) {

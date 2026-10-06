@@ -10,6 +10,7 @@ import { sendTicketCreationLimitError, withTicketCreationPermission } from '../s
 import { validateAssetUid } from '../integrations/activosClient';
 import { applySlaPauseTransition } from '../services/slaService';
 import { SLA_DEADLINE_SQL, TERMINAL_TICKET_STATUS_CODES_SQL, slaIsAtRiskSql, slaIsOverdueSql, slaStateCaseSql } from '../services/slaSql';
+import { allowedStatusTransitions, requiresStatusReason, validateStatusTransition } from '../services/ticketWorkflow';
 
 const router = Router();
 
@@ -234,6 +235,27 @@ router.get('/:id', requireAuth, requireTicketAreaAccess, async (req, res) => {
   }
 });
 
+router.get('/:id/workflow', requireAuth, requireTicketAreaAccess, async (req, res) => {
+  try {
+    const [[ticket]]: any = await pool.query(
+      `SELECT s.code AS status_code FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id
+       WHERE t.id = ? AND t.deleted_at IS NULL LIMIT 1`,
+      [Number(req.params.id)]
+    );
+    if (!ticket) return res.status(404).json({ success: false, error: { code: 'TICKET_NOT_FOUND', message: 'No se encontró el ticket' } });
+    const [statuses]: any = await pool.query('SELECT code, name FROM ticket_statuses ORDER BY sort_order, id');
+    const allowedCodes = allowedStatusTransitions(ticket.status_code);
+    res.json({ success: true, data: {
+      current_status_code: ticket.status_code,
+      allowed_statuses: statuses.filter((status: any) => allowedCodes.includes(status.code)),
+      requires_reason_for: allowedCodes.filter(requiresStatusReason),
+    } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'No se pudo consultar el flujo del ticket' } });
+  }
+});
+
 router.patch('/:id/status', requireAuth, requireTicketAreaAccess, async (req, res) => {
   const ticketId = Number(req.params.id);
   const { to_status_code, comment } = req.body;
@@ -247,23 +269,30 @@ router.patch('/:id/status', requireAuth, requireTicketAreaAccess, async (req, re
       return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'Estado inválido' } });
     }
     const [currentRows]: any = await connection.query(
-      `SELECT t.status_id, s.code AS status_code FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id WHERE t.id = ? AND t.deleted_at IS NULL LIMIT 1`,
+      `SELECT t.status_id, t.assigned_to, s.code AS status_code FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id WHERE t.id = ? AND t.deleted_at IS NULL LIMIT 1`,
       [ticketId]
     );
     if (!currentRows.length) {
       await connection.rollback();
       return res.status(404).json({ success: false, error: { code: 'TICKET_NOT_FOUND', message: 'No se encontró el ticket' } });
     }
+    const validation = validateStatusTransition(currentRows[0].status_code, String(to_status_code), comment, currentRows[0].assigned_to);
+    if (!validation.valid) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, error: { code: validation.code, message: validation.message } });
+    }
     const toStatusId = statusRows[0].id;
     await connection.query('UPDATE tickets SET status_id = ? WHERE id = ?', [toStatusId, ticketId]);
     await connection.query(
       'INSERT INTO ticket_status_history (ticket_id, from_status_id, to_status_id, changed_by, comment) VALUES (?,?,?,?,?)',
-      [ticketId, currentRows[0].status_id, toStatusId, req.user?.id || null, comment || null]
+      [ticketId, currentRows[0].status_id, toStatusId, req.user?.id || null, String(comment || '').trim() || null]
     );
     // Pausar/reanudar el SLA es parte del mismo cambio de estado: se
     // confirma o se revierte junto con él (ver services/slaService.ts).
     await applySlaPauseTransition(connection, ticketId, currentRows[0].status_code, String(to_status_code));
     await connection.commit();
+    await logAudit(req.user?.id || null, req.user?.name || null, 'ticket.status.change', 'ticket', ticketId,
+      { status_code: currentRows[0].status_code }, { status_code: String(to_status_code), comment: String(comment || '').trim() || null });
     res.json({ success: true, message: 'Estado actualizado' });
   } catch (err) {
     await connection.rollback();
