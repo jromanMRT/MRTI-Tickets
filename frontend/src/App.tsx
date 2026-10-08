@@ -1,3 +1,4 @@
+import { PermissionBoundary, useModulePermissions } from './vendor/mrti-platform/permission-ui.js';
 import { useEffect, useRef, useState } from 'react';
 import { Route, Routes, NavLink, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
@@ -39,6 +40,7 @@ function AccountMenu({ profile, onLogout }: { profile: { full_name?: string; rol
 }
 
 function App() {
+  const permissions = useModulePermissions('tickets');
   const [authenticated, setAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_tickets_sidebar_collapsed') === '1');
@@ -129,10 +131,10 @@ function App() {
           <a href="/" title="Ir al home" aria-label="Ir al home" className="brand-home"><span className="brand-mark"><img src={logoUrl} alt="" /></span><span className="brand-text"><strong><span>MRTI</span><span className="brand-module">Tickets</span></strong><small>Minera Río Tinto</small></span></a>
         </div>
         <nav>
-          <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>
-          <NavLink to="/tickets" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">◇</span><span className="nav-label">Tickets</span></NavLink>
-          <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nuevo ticket</span></NavLink>
-          <NavLink to="/knowledge-base" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">📘</span><span className="nav-label">Base de conocimiento</span></NavLink>
+          {permissions.can('/', 'GET') && <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>}
+          {permissions.can('/tickets', 'GET') && <NavLink to="/tickets" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">◇</span><span className="nav-label">Tickets</span></NavLink>}
+          {permissions.can('/tickets/new', 'POST') && <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nuevo ticket</span></NavLink>}
+          {permissions.can('/knowledge-base', 'GET') && <NavLink to="/knowledge-base" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">📘</span><span className="nav-label">Base de conocimiento</span></NavLink>}
           {profile.role === 'administrator' && <NavLink to="/settings/sla-policies" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⏱</span><span className="nav-label">Políticas de SLA</span></NavLink>}
         </nav>
         <div className="sidebar-footer">
@@ -164,7 +166,7 @@ function App() {
           <span><strong>{routeTitle}</strong><small>MRTI Tickets</small></span>
           <div className="session-controls"><PortalNotifications /><AccountMenu profile={profile} onLogout={() => void handleLogout()} /></div>
         </header>
-        <Routes>
+        <PermissionBoundary code="tickets"><Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/tickets/new" element={<NewTicket />} />
@@ -172,7 +174,7 @@ function App() {
           <Route path="/tickets/:id" element={<TicketDetail />} />
           <Route path="/settings/sla-policies" element={<SlaPolicies />} />
           <Route path="/settings/area-teams" element={<div className="page-stack narrow"><section className="panel empty-state"><h1>Equipos de atención</h1><p>Esta configuración se trasladó al Centro de control de Core.</p><a className="button" href="/dashboard?view=control-center&panel=ticket-teams">Abrir Core</a></section></div>} />
-        </Routes>
+        </Routes></PermissionBoundary>
       </main>
     </div>
   );

@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
+vi.mock('axios', () => ({ default: { get: vi.fn(async () => ({ status: 204 })) } }));
+vi.stubEnv('MRTI_CORE_URL', 'http://core.test');
+
 vi.mock('../config/db', () => ({ default: { query: vi.fn(async () => [[{ code: 'P3' }]]) } }));
 vi.mock('../integrations/coreClient', () => ({
   introspectToken: vi.fn(async (token: string) => ({ active: true, user: { id: 'requester', role: token, full_name: 'Solicitante', allowed_modules: ['tickets'] } })),

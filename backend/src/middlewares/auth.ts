@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Request, Response, NextFunction } from 'express';
 import { introspectToken } from '../integrations/coreClient';
 
@@ -50,6 +51,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       success: false,
       error: { code: 'MODULE_FORBIDDEN', message: 'Tu área no tiene acceso a MRTI Tickets' },
     });
+  }
+  try {
+    const coreUrl = process.env.MRTI_CORE_URL || process.env.AUTH_PROFILE_URL?.replace(/\/api\/auth\/(me|identity)$/, '');
+    if (!coreUrl) return res.status(503).json({ success: false, error: { code: 'AUTH_UNAVAILABLE', message: 'Autoridad de permisos no configurada' } });
+    await axios.get(`${coreUrl}/api/auth/module-access/tickets`, { headers: { Authorization: req.headers.authorization }, params: { method: req.method, path: req.originalUrl.split('?')[0] }, timeout: 5000 });
+  } catch (error: any) {
+    const status = [401,403].includes(error.response?.status) ? error.response.status : 503;
+    return res.status(status).json({ success: false, error: { code: 'PERMISSION_FORBIDDEN', message: status === 403 ? 'No tienes permiso para esta sección o acción' : 'No se pudo validar el permiso con Core' } });
   }
   return next();
 }
