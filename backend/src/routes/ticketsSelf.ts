@@ -201,7 +201,15 @@ router.post('/', requireCoreAuth, async (req, res) => {
       }
     }
 
-    const ticket = await withTicketCreationPermission(userId, () => createTicket({
+    const isAdmin = String(req.user?.role || '').toLowerCase() === 'administrator';
+    const onBehalfOfUserId = isAdmin ? String(req.body?.on_behalf_of_user_id || '').trim() || null : null;
+    const onBehalfOfName = onBehalfOfUserId ? String(req.body?.on_behalf_of_name || '').trim() || null : null;
+    const onBehalfOfEmail = onBehalfOfUserId ? String(req.body?.on_behalf_of_email || '').trim() || null : null;
+    const effectiveRequesterId = onBehalfOfUserId || userId;
+    const effectiveRequesterName = onBehalfOfUserId ? onBehalfOfName : (req.user?.name || req.user?.full_name || null);
+    const effectiveRequesterEmail = onBehalfOfUserId ? onBehalfOfEmail : (req.user?.email || null);
+
+    const ticket = await withTicketCreationPermission(effectiveRequesterId, () => createTicket({
       title,
       description: description || null,
       business_area_id: areaId,
@@ -211,13 +219,13 @@ router.post('/', requireCoreAuth, async (req, res) => {
       priority_code: priorityCode,
       asset_uid: requestedAssetUid,
       ...(equipment || {}),
-      requester_id: userId,
-      requester_name: req.user?.name || req.user?.full_name || null,
-      requester_email: req.user?.email || null,
-      requester_number: Number(context?.requester_number || req.user?.user_number) || null,
-      requester_device_id: primaryDevice?.id || null,
-      requester_device_internal_id: primaryDevice?.internal_id || null,
-      requester_device_name: primaryDevice?.name || null,
+      requester_id: effectiveRequesterId,
+      requester_name: effectiveRequesterName,
+      requester_email: effectiveRequesterEmail,
+      requester_number: onBehalfOfUserId ? null : (Number(context?.requester_number || req.user?.user_number) || null),
+      requester_device_id: onBehalfOfUserId ? null : (primaryDevice?.id || null),
+      requester_device_internal_id: onBehalfOfUserId ? null : (primaryDevice?.internal_id || null),
+      requester_device_name: onBehalfOfUserId ? null : (primaryDevice?.name || null),
       origin_site_id: location?.site_id || null,
       origin_site_name: location?.site_name || null,
       origin_building_name: location?.building_name || null,
@@ -226,7 +234,8 @@ router.post('/', requireCoreAuth, async (req, res) => {
       origin_area_name: location?.area_name || null,
       created_by: userId,
     }));
-    await logAudit(userId, req.user?.name || req.user?.full_name || null, 'ticket.self.create', 'ticket', ticket.id, null, ticket);
+    const auditAction = onBehalfOfUserId ? 'ticket.self.create_on_behalf' : 'ticket.self.create';
+    await logAudit(userId, req.user?.name || req.user?.full_name || null, auditAction, 'ticket', ticket.id, null, { ...ticket, on_behalf_of: onBehalfOfUserId || undefined });
     res.status(201).json({ success: true, data: ticket, message: 'Ticket enviado correctamente' });
   } catch (err) {
     if (err instanceof TicketEquipmentError) return res.status(err.status).json({ success: false, error: { code: err.code, message: err.message } });

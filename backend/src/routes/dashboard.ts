@@ -11,7 +11,11 @@ router.get('/summary', requireAuth, async (req, res) => {
   try {
     const scope = await getTicketAreaScope(req.user);
     const query = (sql: string) => pool.query(sql, scope.params);
-    const [totalsResult, priorityResult, areaResult, workloadResult, recentResult, createdTrendResult, resolvedTrendResult] = await Promise.all([
+    const [
+      totalsResult, priorityResult, areaResult, workloadResult, recentResult,
+      createdTrendResult, resolvedTrendResult,
+      processedRecentResult, processedByAreaResult, processedTotalsResult,
+    ] = await Promise.all([
       query(`SELECT COUNT(*) AS total,
         SUM(s.code NOT IN (${terminalStatuses})) AS \`open\`, SUM(s.code = 'NEW') AS new_count,
         SUM(s.code IN ('ASSIGNED','IN_DIAGNOSIS','IN_PROGRESS','REOPENED')) AS in_progress,
@@ -60,15 +64,46 @@ router.get('/summary', requireAuth, async (req, res) => {
        JOIN ticket_statuses s ON s.id = h.to_status_id
        WHERE t.deleted_at IS NULL AND ${scope.sql} AND s.code IN ('RESOLVED','CLOSED') AND h.created_at >= CURDATE() - INTERVAL 6 DAY
        GROUP BY DATE(h.created_at) ORDER BY day`),
+      // Recently processed tickets (last 8 resolved/closed/cancelled).
+      query(`SELECT t.id, t.folio, t.title, t.priority_code, t.assigned_to_name, t.updated_at,
+        s.code AS status_code, s.name AS status_name, COALESCE(b.name, 'Sin área') AS business_area_name,
+        ${slaStateCaseSql(terminalStatuses)} AS sla_state,
+        ROUND(TIMESTAMPDIFF(MINUTE, t.created_at, t.updated_at) / 60, 1) AS resolution_hours
+       FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id LEFT JOIN ticket_categories c ON c.id = t.category_id
+       LEFT JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)
+       LEFT JOIN sla_policies sp ON sp.id = t.sla_policy_id
+       WHERE t.deleted_at IS NULL AND ${scope.sql} AND s.code IN (${terminalStatuses})
+       ORDER BY t.updated_at DESC LIMIT 8`),
+      // Processed by area (last 30 days).
+      query(`SELECT b.id, COALESCE(b.name, 'Sin área') AS name, COUNT(*) AS processed,
+        ROUND(AVG(TIMESTAMPDIFF(MINUTE, t.created_at, t.updated_at) / 60), 1) AS avg_resolution_hours
+       FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id
+       LEFT JOIN ticket_categories c ON c.id = t.category_id
+       LEFT JOIN business_areas b ON b.id = COALESCE(t.business_area_id, c.business_area_id)
+       WHERE t.deleted_at IS NULL AND ${scope.sql} AND s.code IN (${terminalStatuses})
+         AND t.updated_at >= CURDATE() - INTERVAL 29 DAY
+       GROUP BY b.id, b.name ORDER BY processed DESC, name`),
+      // Processed totals (last 7 days) + average resolution time.
+      query(`SELECT COUNT(*) AS processed_7d,
+        ROUND(AVG(TIMESTAMPDIFF(MINUTE, t.created_at, t.updated_at) / 60), 1) AS avg_resolution_hours
+       FROM tickets t JOIN ticket_statuses s ON s.id = t.status_id
+       LEFT JOIN ticket_categories c ON c.id = t.category_id
+       WHERE t.deleted_at IS NULL AND ${scope.sql} AND s.code IN (${terminalStatuses})
+         AND t.updated_at >= CURDATE() - INTERVAL 6 DAY`),
     ]);
     const totals = (totalsResult[0] as any[])[0] || {};
+    const processedTotals = (processedTotalsResult[0] as any[])[0] || {};
     res.json({ success: true, data: {
       total: Number(totals.total || 0), open: Number(totals.open || 0), new: Number(totals.new_count || 0),
       inProgress: Number(totals.in_progress || 0), waiting: Number(totals.waiting || 0), resolved: Number(totals.resolved || 0),
       closed: Number(totals.closed || 0), unassigned: Number(totals.unassigned || 0), overdue: Number(totals.overdue || 0),
       atRisk: Number(totals.at_risk || 0), averageOpenAgeHours: Number(totals.average_open_age_hours || 0),
+      processed7d: Number(processedTotals.processed_7d || 0),
+      avgResolutionHours: Number(processedTotals.avg_resolution_hours || 0),
       byPriority: priorityResult[0], byArea: areaResult[0], workload: workloadResult[0], recent: recentResult[0],
       trend: { created: createdTrendResult[0], resolved: resolvedTrendResult[0] },
+      processedRecent: processedRecentResult[0],
+      processedByArea: processedByAreaResult[0],
     } });
   } catch (err) {
     console.error(err);

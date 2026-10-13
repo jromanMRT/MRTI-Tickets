@@ -1,6 +1,7 @@
 import { PermissionBoundary, useModulePermissions } from './vendor/mrti-platform/permission-ui.js';
 import { useEffect, useRef, useState } from 'react';
 import { Route, Routes, NavLink, useLocation } from 'react-router-dom';
+import { Home, ClipboardList, Plus, BookOpen, Clock, Sun, Moon, ChevronLeft, ChevronRight, User, Settings, Diamond, LogOut, Menu, ChevronDown } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
@@ -11,8 +12,18 @@ import api from './services/api';
 import { useTheme } from './hooks/useTheme';
 import { PortalNotifications } from './components/PortalNotifications';
 import { ModuleSwitcher } from './components/ModuleSwitcher';
+import { CommandPalette } from '@/components/CommandPalette';
+import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
 import './style.css';
 import './shell.css';
+
+const NAV_ITEMS = [
+  { to: '/', end: true, icon: Home, label: 'Resumen', permission: '/' },
+  { to: '/tickets', icon: ClipboardList, label: 'Tickets', permission: '/tickets' },
+  { to: '/tickets/new', icon: Plus, label: 'Nuevo ticket', permission: '/tickets/new', method: 'POST' as const },
+  { to: '/knowledge-base', icon: BookOpen, label: 'Base de conocimiento', permission: '/knowledge-base' },
+];
 
 function AccountMenu({ profile, onLogout }: { profile: { full_name?: string; role?: string }; onLogout: () => void }) {
   const [open, setOpen] = useState(false);
@@ -28,13 +39,15 @@ function AccountMenu({ profile, onLogout }: { profile: { full_name?: string; rol
   }, []);
   return <div className="account-menu" ref={ref}>
     <button type="button" className="session-profile" onClick={() => setOpen((value) => !value)} aria-label="Abrir menú de usuario" aria-expanded={open}>
-      <span className="session-avatar" aria-hidden="true">{initials}</span><span className="account-identity"><strong>{name}</strong><small>{profile.role || 'Sesión activa'}</small></span><span className="account-chevron" aria-hidden="true">⌄</span>
+      <Avatar className="h-[34px] w-[34px] text-[0.66rem] border-[1.5px] border-ore-400/30">{initials}</Avatar>
+      <span className="account-identity"><strong>{name}</strong><small>{profile.role || 'Sesión activa'}</small></span>
+      <span className="account-chevron" aria-hidden="true"><ChevronDown className="h-3.5 w-3.5" /></span>
     </button>
     {open && <div className="account-menu-panel" role="menu">
-      <a href="/?view=account" role="menuitem"><span aria-hidden="true">○</span>Perfil</a>
-      {profile.role === 'administrator' && <a href="/?view=brand-assets" role="menuitem"><span aria-hidden="true">◆</span>Recursos de marca</a>}
-      {profile.role === 'administrator' && <a href="/?view=control-center" role="menuitem"><span aria-hidden="true">⚙</span>Centro de control</a>}
-      <button type="button" className="account-menu-logout" onClick={onLogout} role="menuitem"><span aria-hidden="true">↪</span>Cerrar sesión</button>
+      <a href="/?view=account" role="menuitem"><span aria-hidden="true"><User className="h-4 w-4" /></span>Perfil</a>
+      {profile.role === 'administrator' && <a href="/?view=brand-assets" role="menuitem"><span aria-hidden="true"><Diamond className="h-4 w-4" /></span>Recursos de marca</a>}
+      {profile.role === 'administrator' && <a href="/?view=control-center" role="menuitem"><span aria-hidden="true"><Settings className="h-4 w-4" /></span>Centro de control</a>}
+      <button type="button" className="account-menu-logout" onClick={onLogout} role="menuitem"><span aria-hidden="true"><LogOut className="h-4 w-4" /></span>Cerrar sesión</button>
     </div>}
   </div>;
 }
@@ -84,8 +97,6 @@ function App() {
     return () => window.removeEventListener('mrti-auth-expired', expired);
   }, []);
 
-  // El logo lo administra Core (Centro de control → Recursos de marca); se
-  // consulta en vivo para que un cambio ahí se refleje aquí sin tocar código.
   useEffect(() => {
     fetch('/api/portal/v1/brand-appearance', { cache: 'no-store' })
       .then((response) => response.ok ? response.json() : Promise.reject())
@@ -125,56 +136,68 @@ function App() {
 
   return (
     <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}${mobileMenuOpen ? ' mobile-menu-open' : ''}`}>
+      <CommandPalette permissions={permissions} profile={profile} />
       <button className="sidebar-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación" />
       <aside className="sidebar" id="tickets-sidebar" aria-label="Navegación de Tickets">
         <div className="brand-row">
           <a href="/" title="Ir al home" aria-label="Ir al home" className="brand-home"><span className="brand-mark"><img src={logoUrl} alt="" /></span><span className="brand-text"><strong><span>MRTI</span><span className="brand-module">Tickets</span></strong><small>Minera Río Tinto</small></span></a>
         </div>
         <nav>
-          {permissions.can('/', 'GET') && <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⌂</span><span className="nav-label">Resumen</span></NavLink>}
-          {permissions.can('/tickets', 'GET') && <NavLink to="/tickets" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">◇</span><span className="nav-label">Tickets</span></NavLink>}
-          {permissions.can('/tickets/new', 'POST') && <NavLink to="/tickets/new" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">＋</span><span className="nav-label">Nuevo ticket</span></NavLink>}
-          {permissions.can('/knowledge-base', 'GET') && <NavLink to="/knowledge-base" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">📘</span><span className="nav-label">Base de conocimiento</span></NavLink>}
-          {profile.role === 'administrator' && <NavLink to="/settings/sla-policies" onClick={() => setMobileMenuOpen(false)}><span className="nav-icon" aria-hidden="true">⏱</span><span className="nav-label">Políticas de SLA</span></NavLink>}
+          {NAV_ITEMS.map((item) => {
+            const method = item.method || 'GET';
+            if (!permissions.can(item.permission, method)) return null;
+            return (
+              <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setMobileMenuOpen(false)}>
+                <span className="nav-icon" aria-hidden="true"><item.icon className="h-[18px] w-[18px]" /></span>
+                <span className="nav-label">{item.label}</span>
+              </NavLink>
+            );
+          })}
+          {profile.role === 'administrator' && (
+            <NavLink to="/settings/sla-policies" onClick={() => setMobileMenuOpen(false)}>
+              <span className="nav-icon" aria-hidden="true"><Clock className="h-[18px] w-[18px]" /></span>
+              <span className="nav-label">Políticas de SLA</span>
+            </NavLink>
+          )}
         </nav>
         <div className="sidebar-footer">
           <button
             type="button"
-            className="icon-button sidebar-collapse-button"
+            className="icon-button"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             aria-label="Cambiar tema"
             aria-pressed={theme === 'dark'}
           >
-            {theme === 'dark' ? '🌙' : '☀️'}
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
           <button
             type="button"
-            className="icon-button"
+            className="icon-button sidebar-collapse-button"
             onClick={toggleCollapse}
             title={collapsed ? 'Expandir' : 'Colapsar'}
             aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
           >
-            {collapsed ? '»' : '«'}
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         </div>
       </aside>
       <main className="content">
         <header className="topbar">
-          <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar">☰</button>
+          <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar"><Menu className="h-[18px] w-[18px]" /></button>
           <ModuleSwitcher />
           <span><strong>{routeTitle}</strong><small>MRTI Tickets</small></span>
           <div className="session-controls"><PortalNotifications /><AccountMenu profile={profile} onLogout={() => void handleLogout()} /></div>
         </header>
-        <PermissionBoundary code="tickets"><Routes>
+        <PermissionBoundary code="tickets"><div key={location.pathname} className="page-enter"><Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/tickets/new" element={<NewTicket />} />
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/tickets/:id" element={<TicketDetail />} />
           <Route path="/settings/sla-policies" element={<SlaPolicies />} />
-          <Route path="/settings/area-teams" element={<div className="page-stack narrow"><section className="panel empty-state"><h1>Equipos de atención</h1><p>Esta configuración se trasladó al Centro de control de Core.</p><a className="button" href="/dashboard?view=control-center&panel=ticket-teams">Abrir Core</a></section></div>} />
-        </Routes></PermissionBoundary>
+          <Route path="/settings/area-teams" element={<div className="mx-auto grid max-w-[920px] gap-6"><section className="rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-sm dark:border-stone-600 dark:bg-stone-800"><h1 className="text-xl font-bold text-stone-900 dark:text-stone-50">Equipos de atención</h1><p className="mt-2 text-sm text-stone-400">Esta configuración se trasladó al Centro de control de Core.</p><Button className="mt-4" asChild><a href="/dashboard?view=control-center&panel=ticket-teams">Abrir Core</a></Button></section></div>} />
+        </Routes></div></PermissionBoundary>
       </main>
     </div>
   );

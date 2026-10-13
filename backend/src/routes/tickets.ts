@@ -11,6 +11,7 @@ import { validateAssetUid } from '../integrations/activosClient';
 import { applySlaPauseTransition } from '../services/slaService';
 import { SLA_DEADLINE_SQL, TERMINAL_TICKET_STATUS_CODES_SQL, slaIsAtRiskSql, slaIsOverdueSql, slaStateCaseSql } from '../services/slaSql';
 import { allowedStatusTransitions, requiresStatusReason, validateStatusTransition } from '../services/ticketWorkflow';
+import { maybeCreateKbDraft } from '../services/kbAutoArticle';
 
 const router = Router();
 
@@ -293,6 +294,11 @@ router.patch('/:id/status', requireAuth, requireTicketAreaAccess, async (req, re
     await connection.commit();
     await logAudit(req.user?.id || null, req.user?.name || null, 'ticket.status.change', 'ticket', ticketId,
       { status_code: currentRows[0].status_code }, { status_code: String(to_status_code), comment: String(comment || '').trim() || null });
+
+    if (String(to_status_code).toUpperCase() === 'RESOLVED') {
+      maybeCreateKbDraft(ticketId).catch((err) => console.error('[kb-auto] draft generation failed', err));
+    }
+
     res.json({ success: true, message: 'Estado actualizado' });
   } catch (err) {
     await connection.rollback();

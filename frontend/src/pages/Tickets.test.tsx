@@ -1,12 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
 import Tickets from './Tickets';
+import { TestWrapper } from '../test-utils';
 
 test('renders tickets heading', () => {
-  render(
-    <BrowserRouter>
-      <Tickets />
-    </BrowserRouter>
-  );
+  render(<Tickets />, { wrapper: TestWrapper });
   expect(screen.getByRole('heading', { name: 'Tickets' })).toBeInTheDocument();
 });

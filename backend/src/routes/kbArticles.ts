@@ -7,7 +7,7 @@ const router = Router();
 const ARTICLE_SELECT = `
   SELECT a.id, a.title, a.body, a.category_id, c.name AS category_name,
          a.subcategory_id, s.name AS subcategory_name, a.status,
-         a.created_by, a.created_at, a.updated_at
+         a.created_by, a.source_ticket_id, a.created_at, a.updated_at
     FROM kb_articles a
     LEFT JOIN ticket_categories c ON c.id = a.category_id
     LEFT JOIN ticket_subcategories s ON s.id = a.subcategory_id`;
@@ -68,6 +68,7 @@ router.get('/', requireAuth, async (req, res) => {
       subcategory_id: row.subcategory_id,
       subcategory_name: row.subcategory_name,
       status: row.status,
+      source_ticket_id: row.source_ticket_id || null,
       updated_at: row.updated_at,
     }));
     res.json({ success: true, data });
@@ -75,6 +76,55 @@ router.get('/', requireAuth, async (req, res) => {
     // eslint-disable-next-line no-console
     console.error(err);
     res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error listing KB articles' } });
+  }
+});
+
+router.get('/suggestions', requireAuth, async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const categoryId = req.query.category_id ? String(req.query.category_id) : null;
+    const subcategoryId = req.query.subcategory_id ? String(req.query.subcategory_id) : null;
+
+    if (!q && !categoryId) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const clauses = ['a.status = ?'];
+    const params: Array<string | number> = ['published'];
+
+    if (categoryId) {
+      clauses.push('a.category_id = ?');
+      params.push(categoryId);
+    }
+    if (subcategoryId) {
+      clauses.push('a.subcategory_id = ?');
+      params.push(subcategoryId);
+    }
+
+    let orderBy = 'a.updated_at DESC';
+    if (q.length >= 3) {
+      clauses.push('MATCH(a.title, a.body) AGAINST (? IN NATURAL LANGUAGE MODE)');
+      params.push(q);
+      orderBy = 'MATCH(a.title, a.body) AGAINST (? IN NATURAL LANGUAGE MODE) DESC';
+      params.push(q);
+    }
+
+    const [rows]: any = await pool.query(
+      `${ARTICLE_SELECT} WHERE ${clauses.join(' AND ')} ORDER BY ${orderBy} LIMIT 5`,
+      params
+    );
+
+    const data = rows.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      snippet: String(row.body || '').slice(0, 200),
+      category_name: row.category_name,
+      subcategory_name: row.subcategory_name,
+    }));
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: true, data: [] });
   }
 });
 
