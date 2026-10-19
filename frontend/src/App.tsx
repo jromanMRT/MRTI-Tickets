@@ -63,18 +63,6 @@ function App() {
   const location = useLocation();
   let profile: { full_name?: string; role?: string } = {};
   try { profile = JSON.parse(localStorage.getItem('auth_profile') || '{}'); } catch { profile = {}; }
-  const routeTitle = location.pathname === '/'
-    ? 'Resumen'
-    : location.pathname === '/tickets/new'
-      ? 'Nuevo ticket'
-      : location.pathname === '/settings/sla-policies'
-        ? 'Políticas de SLA'
-      : location.pathname === '/knowledge-base'
-        ? 'Base de conocimiento'
-      : location.pathname.startsWith('/tickets/')
-        ? 'Detalle del ticket'
-        : 'Tickets';
-
   async function handleLogout() {
     try {
       const token = localStorage.getItem('auth_token');
@@ -186,7 +174,6 @@ function App() {
         <header className="topbar">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar"><Menu className="h-[18px] w-[18px]" /></button>
           <ModuleSwitcher />
-          <span><strong>{routeTitle}</strong><small>MRTI Tickets</small></span>
           <div className="session-controls"><PortalNotifications /><AccountMenu profile={profile} onLogout={() => void handleLogout()} /></div>
         </header>
         <PermissionBoundary code="tickets"><div key={location.pathname} className="page-enter"><Routes>

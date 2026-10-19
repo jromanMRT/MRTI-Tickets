@@ -1,0 +1,21 @@
+# Sólo promueve frontend ya construido. La variable debe contener @sha256:.
+services:
+  frontend:
+    image: ${MRTI_TICKETS_FRONTEND_IMAGE:?use una imagen fijada por digest OCI}
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:4173:8080'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O - http://127.0.0.1:8080/healthz | grep -qx ok']
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - tickets
+
+networks:
+  tickets:
+    name: mrti-tickets_default
+    external: true

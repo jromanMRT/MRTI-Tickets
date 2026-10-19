@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -29,6 +30,12 @@ export function createApp() {
   const app = express();
   // El backend solo se publica en 127.0.0.1 y recibe tráfico mediante Nginx.
   app.set('trust proxy', 1);
+  app.use((req, res, next) => {
+    const incoming = req.get('X-Request-Id');
+    const requestId = incoming && /^[A-Za-z0-9._-]{8,64}$/.test(incoming) ? incoming : randomUUID();
+    res.setHeader('X-Request-Id', requestId);
+    next();
+  });
   app.use(helmet());
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
