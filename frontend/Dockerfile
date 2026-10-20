@@ -1,5 +1,6 @@
 FROM node:20-alpine AS build
 WORKDIR /app
+RUN chown node:node /app
 COPY --chown=node:node package.json package-lock.json tsconfig.json tsconfig.node.json vite.config.ts ./
 USER node
 RUN npm ci --ignore-scripts
