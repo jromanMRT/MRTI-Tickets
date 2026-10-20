@@ -11,7 +11,7 @@ import KnowledgeBase from './pages/KnowledgeBase';
 import api from './services/api';
 import { useTheme } from './hooks/useTheme';
 import { PortalNotifications } from './components/PortalNotifications';
-import { ModuleSwitcher } from './components/ModuleSwitcher';
+import { ModuleSwitcher } from './components/layout/ModuleSwitcher';
 import { CommandPalette } from '@/components/CommandPalette';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -173,7 +173,11 @@ function App() {
       <main className="content">
         <header className="topbar">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar"><Menu className="h-[18px] w-[18px]" /></button>
-          <ModuleSwitcher />
+          <a href="/" className="portal-topbar-brand" aria-label="Ir al home">
+            <span className="portal-topbar-brand-mark"><img src={logoUrl} alt="" /></span>
+            <span className="portal-topbar-brand-copy"><strong><span>MRTI</span><span className="brand-module">Tickets</span></strong><small>Minera Río Tinto</small></span>
+          </a>
+          <ModuleSwitcher moduleCode="tickets" />
           <div className="session-controls"><PortalNotifications /><AccountMenu profile={profile} onLogout={() => void handleLogout()} /></div>
         </header>
         <PermissionBoundary code="tickets"><div key={location.pathname} className="page-enter"><Routes>
