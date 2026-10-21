@@ -1,8 +1,8 @@
 import { PermissionBoundary, useModulePermissions } from './vendor/mrti-platform/permission-ui.js';
 import { useEffect, useRef, useState } from 'react';
 import { Route, Routes, NavLink, useLocation } from 'react-router-dom';
-import { Home, ClipboardList, Plus, BookOpen, Clock, User, Settings, Diamond, LogOut, Menu, ChevronDown } from 'lucide-react';
-import { ModuleSidebar, SidebarGroup } from './components/layout/ModuleSidebar';
+import { User, Settings, Diamond, LogOut, Menu, ChevronDown } from 'lucide-react';
+import { ModuleSidebar, SidebarGroup, SidebarNavIcon } from './components/layout/ModuleSidebar';
 import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
@@ -19,11 +19,19 @@ import { Avatar } from '@/components/ui/avatar';
 import './style.css';
 import './shell.css';
 
+const NAV_ICON_PATHS: Record<string, JSX.Element> = {
+  home: <><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5M9 21v-7h6v7" /></>,
+  tickets: <><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v2M13 17v2M13 11v2" /></>,
+  plus: <><path d="M12 5v14M5 12h14" /></>,
+  book: <><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></>,
+  clock: <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>,
+};
+
 const NAV_ITEMS = [
-  { to: '/', end: true, icon: Home, label: 'Resumen', permission: '/' },
-  { to: '/tickets', icon: ClipboardList, label: 'Tickets', permission: '/tickets' },
-  { to: '/tickets/new', icon: Plus, label: 'Nuevo ticket', permission: '/tickets/new', method: 'POST' as const },
-  { to: '/knowledge-base', icon: BookOpen, label: 'Base de conocimiento', permission: '/knowledge-base' },
+  { to: '/', end: true, icon: 'home', label: 'Resumen', permission: '/' },
+  { to: '/tickets', icon: 'tickets', label: 'Tickets', permission: '/tickets' },
+  { to: '/tickets/new', icon: 'plus', label: 'Nuevo ticket', permission: '/tickets/new', method: 'POST' as const },
+  { to: '/knowledge-base', icon: 'book', label: 'Base de conocimiento', permission: '/knowledge-base' },
 ];
 
 function AccountMenu({ profile, onLogout }: { profile: { full_name?: string; role?: string }; onLogout: () => void }) {
@@ -127,8 +135,11 @@ function App() {
             return (
               <li key={item.to}>
                 <NavLink to={item.to} end={item.end} onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `portal-module-nav-item${isActive ? ' is-active' : ''}`}>
-                  <span className="portal-module-nav-icon"><item.icon size={20} /></span>
-                  <span className="portal-module-nav-label">{item.label}</span>
+                  {({ isActive }) => (<>
+                    <SidebarNavIcon>{NAV_ICON_PATHS[item.icon]}</SidebarNavIcon>
+                    <span className="portal-module-nav-label">{item.label}</span>
+                    {isActive && <span className="portal-module-nav-dot" />}
+                  </>)}
                 </NavLink>
               </li>
             );
@@ -136,8 +147,11 @@ function App() {
           {profile.role === 'administrator' && (
             <li>
               <NavLink to="/settings/sla-policies" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `portal-module-nav-item${isActive ? ' is-active' : ''}`}>
-                <span className="portal-module-nav-icon"><Clock size={20} /></span>
-                <span className="portal-module-nav-label">Políticas de SLA</span>
+                {({ isActive }) => (<>
+                  <SidebarNavIcon>{NAV_ICON_PATHS.clock}</SidebarNavIcon>
+                  <span className="portal-module-nav-label">Políticas de SLA</span>
+                  {isActive && <span className="portal-module-nav-dot" />}
+                </>)}
               </NavLink>
             </li>
           )}
