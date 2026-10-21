@@ -1,7 +1,8 @@
 import { PermissionBoundary, useModulePermissions } from './vendor/mrti-platform/permission-ui.js';
 import { useEffect, useRef, useState } from 'react';
 import { Route, Routes, NavLink, useLocation } from 'react-router-dom';
-import { Home, ClipboardList, Plus, BookOpen, Clock, Sun, Moon, ChevronLeft, ChevronRight, User, Settings, Diamond, LogOut, Menu, ChevronDown } from 'lucide-react';
+import { Home, ClipboardList, Plus, BookOpen, Clock, User, Settings, Diamond, LogOut, Menu, ChevronDown } from 'lucide-react';
+import { ModuleSidebar, SidebarGroup } from './components/layout/ModuleSidebar';
 import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
@@ -58,7 +59,6 @@ function App() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_tickets_sidebar_collapsed') === '1');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [logoUrl, setLogoUrl] = useState('/company-logo.svg');
   const [theme, setTheme] = useTheme();
   const location = useLocation();
   let profile: { full_name?: string; role?: string } = {};
@@ -83,13 +83,6 @@ function App() {
     }
     api.get('/session').then(() => setAuthenticated(true)).catch(() => setAuthenticated(false)).finally(() => setCheckingSession(false));
     return () => window.removeEventListener('mrti-auth-expired', expired);
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/portal/v1/brand-appearance', { cache: 'no-store' })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then(({ data }) => { if (data?.portal_logo?.content_url) setLogoUrl(data.portal_logo.content_url); })
-      .catch(() => {});
   }, []);
 
   useEffect(() => setMobileMenuOpen(false), [location.pathname]);
@@ -126,50 +119,30 @@ function App() {
     <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}${mobileMenuOpen ? ' mobile-menu-open' : ''}`}>
       <CommandPalette permissions={permissions} profile={profile} />
       <button className="sidebar-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación" />
-      <aside className="sidebar" id="tickets-sidebar" aria-label="Navegación de Tickets">
-        <div className="brand-row">
-          <a href="/" title="Ir al home" aria-label="Ir al home" className="brand-home"><span className="brand-mark"><img src={logoUrl} alt="" /></span><span className="brand-text"><strong><span>MRTI</span><span className="brand-module">Tickets</span></strong><small>Minera Río Tinto</small></span></a>
-        </div>
-        <nav>
+      <ModuleSidebar moduleLabel="Tickets" collapsed={collapsed} mobileOpen={mobileMenuOpen} onToggleCollapse={toggleCollapse} onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} theme={theme}>
+        <SidebarGroup>
           {NAV_ITEMS.map((item) => {
             const method = item.method || 'GET';
             if (!permissions.can(item.permission, method)) return null;
             return (
-              <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setMobileMenuOpen(false)}>
-                <span className="nav-icon" aria-hidden="true"><item.icon className="h-[18px] w-[18px]" /></span>
-                <span className="nav-label">{item.label}</span>
-              </NavLink>
+              <li key={item.to}>
+                <NavLink to={item.to} end={item.end} onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `portal-module-nav-item${isActive ? ' is-active' : ''}`}>
+                  <span className="portal-module-nav-icon"><item.icon size={20} /></span>
+                  <span className="portal-module-nav-label">{item.label}</span>
+                </NavLink>
+              </li>
             );
           })}
           {profile.role === 'administrator' && (
-            <NavLink to="/settings/sla-policies" onClick={() => setMobileMenuOpen(false)}>
-              <span className="nav-icon" aria-hidden="true"><Clock className="h-[18px] w-[18px]" /></span>
-              <span className="nav-label">Políticas de SLA</span>
-            </NavLink>
+            <li>
+              <NavLink to="/settings/sla-policies" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `portal-module-nav-item${isActive ? ' is-active' : ''}`}>
+                <span className="portal-module-nav-icon"><Clock size={20} /></span>
+                <span className="portal-module-nav-label">Políticas de SLA</span>
+              </NavLink>
+            </li>
           )}
-        </nav>
-        <div className="sidebar-footer">
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-            aria-label="Cambiar tema"
-            aria-pressed={theme === 'dark'}
-          >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-          <button
-            type="button"
-            className="icon-button sidebar-collapse-button"
-            onClick={toggleCollapse}
-            title={collapsed ? 'Expandir' : 'Colapsar'}
-            aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
-        </div>
-      </aside>
+        </SidebarGroup>
+      </ModuleSidebar>
       <main className="content">
         <header className="topbar mrti-global-header">
           <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir navegación" aria-expanded={mobileMenuOpen} aria-controls="tickets-sidebar"><Menu className="h-[18px] w-[18px]" /></button>
