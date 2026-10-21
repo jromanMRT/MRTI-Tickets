@@ -356,3 +356,14 @@ textarea { resize: vertical; }
   to { opacity: 1; transform: translateY(0); }
 }
 .page-enter { animation: page-fade-in 200ms ease-out both; }
+
+/* Adaptación de tokens RGB al contrato compartido del encabezado. */
+.content {
+  --header-width: calc(100% + 64px); --header-margin: -32px;
+  --header-bg: rgb(var(--bg)); --header-line: rgb(var(--line));
+  --header-ink: rgb(var(--ink)); --header-muted: rgb(var(--ink-soft));
+  --header-surface: rgb(var(--surface)); --header-accent: rgb(var(--gold-deep));
+  --header-gold: rgb(var(--gold));
+}
+@media (max-width: 900px) { .content { --header-width: calc(100% + 36px); --header-margin: -18px; } }
+@media (max-width: 580px) { .content { --header-width: calc(100% + 26px); --header-margin: -13px; } }
