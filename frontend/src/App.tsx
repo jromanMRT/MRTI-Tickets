@@ -65,7 +65,7 @@ function App() {
   const permissions = useModulePermissions('tickets');
   const [authenticated, setAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_tickets_sidebar_collapsed') === '1');
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_sidebar_collapsed') === '1');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useTheme();
   const location = useLocation();
@@ -118,7 +118,7 @@ function App() {
 
   function toggleCollapse() {
     setCollapsed((prev) => {
-      localStorage.setItem('mrti_tickets_sidebar_collapsed', prev ? '0' : '1');
+      localStorage.setItem('mrti_sidebar_collapsed', prev ? '0' : '1');
       return !prev;
     });
   }
