@@ -66,6 +66,23 @@ function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mrti_sidebar_collapsed') === '1');
+
+  // Releer al recuperar una página y cuando otra pestaña cambia la preferencia.
+  useEffect(() => {
+    const syncSidebar = () => setCollapsed(localStorage.getItem('mrti_sidebar_collapsed') === '1');
+    syncSidebar();
+    window.addEventListener('storage', syncSidebar);
+    window.addEventListener('focus', syncSidebar);
+    window.addEventListener('pageshow', syncSidebar);
+    document.addEventListener('visibilitychange', syncSidebar);
+    return () => {
+      window.removeEventListener('storage', syncSidebar);
+      window.removeEventListener('focus', syncSidebar);
+      window.removeEventListener('pageshow', syncSidebar);
+      document.removeEventListener('visibilitychange', syncSidebar);
+    };
+  }, []);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useTheme();
   const location = useLocation();
