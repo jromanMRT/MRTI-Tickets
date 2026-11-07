@@ -35,12 +35,12 @@ services:
       - AUTH_PROFILE_URL=http://host.docker.internal:3005/api/auth/me
       - AUTH_TICKET_CONTEXT_URL=http://host.docker.internal:3005/api/auth/ticket-context
       - AUTH_ASSIGNEES_URL=http://host.docker.internal:3005/api/auth/assignees
-      - AGENT_API_KEY=ff8a81dea344cd3887e1897fd1d4cca3ac08e80b61de048a141e2f8dcaa9eb21
+      - AGENT_API_KEY=${AGENT_API_KEY:?Configure AGENT_API_KEY in .env}
       - CORE_NOTIFICATION_URL=http://host.docker.internal:3002/api/notifications
       # Llamadas de servicio hacia Activos/Infra sin usuario navegando (Fase 1
       # de la integración de plataforma) -- mismo valor que INTERNAL_SERVICE_KEY
       # en los .env de MRTI-Activos y MRTI-Infra.
-      - INTERNAL_SERVICE_KEY=b98a9c2174252bcdeba70b0902a08b81725f0428000923b7d0e1088c8c387ad3
+      - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY:?Configure INTERNAL_SERVICE_KEY in .env}
     depends_on:
       db:
         condition: service_healthy

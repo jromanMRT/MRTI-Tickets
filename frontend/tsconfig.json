@@ -15,7 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite/client", "vitest", "vitest/globals"],
+    "types": ["vite/client", "vitest", "vitest/globals", "node"],
     "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }
