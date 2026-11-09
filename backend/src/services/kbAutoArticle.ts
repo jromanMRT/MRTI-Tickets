@@ -30,9 +30,12 @@ export async function maybeCreateKbDraft(ticketId: number): Promise<number | nul
     );
     if (!ticket || !ticket.category_id) return null;
 
+    // Un borrador puede publicarse después de la revisión humana. Por eso la
+    // frontera de privacidad se aplica en SQL: una nota interna nunca debe
+    // formar parte del material candidato a la base de conocimiento.
     const [comments]: any = await pool.query(
       `SELECT content, author_name, created_at FROM ticket_comments
-        WHERE ticket_id = ? ORDER BY created_at ASC`,
+        WHERE ticket_id = ? AND is_private = 0 ORDER BY created_at ASC`,
       [ticketId]
     );
 
