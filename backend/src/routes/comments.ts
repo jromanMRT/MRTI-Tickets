@@ -39,6 +39,7 @@ router.post('/', requireAuth, requireTicketAreaAccess, async (req, res) => {
 
   try {
     const [result]: any = await pool.query('INSERT INTO ticket_comments (ticket_id, author_id, author_name, is_private, content) VALUES (?,?,?,?,?)', [ticketId, authorId, authorName, is_private ? 1 : 0, normalizedContent]);
+    await pool.query('UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [ticketId]);
     await logAudit(authorId, authorName, 'comment.create', 'ticket_comment', result.insertId, null, { ticket_id: ticketId, is_private: !!is_private, content: normalizedContent });
     const [rows]: any = await pool.query('SELECT id, author_id, author_name, is_private, content, edited_at, created_at FROM ticket_comments WHERE id = ? LIMIT 1', [result.insertId]);
     res.status(201).json({ success: true, data: rows[0] });

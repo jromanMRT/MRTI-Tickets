@@ -108,6 +108,67 @@ router.get('/me/:id', requireCoreAuth, async (req, res) => {
   }
 });
 
+// Conversación pública del autoservicio. Las notas internas se excluyen en
+// SQL, no en el navegador, para que nunca crucen el límite hacia Core.
+router.get('/me/:id/comments', requireCoreAuth, async (req, res) => {
+  const userId = String(req.user?.id || '');
+  try {
+    const [[ticket]]: any = await pool.query(
+      'SELECT id FROM tickets WHERE id = ? AND deleted_at IS NULL AND (requester_id = ? OR assigned_to = ?) LIMIT 1',
+      [req.params.id, userId, userId]
+    );
+    if (!ticket) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Ticket no encontrado' } });
+    const [comments]: any = await pool.query(
+      `SELECT id, author_id, author_name, content, created_at
+         FROM ticket_comments
+        WHERE ticket_id = ? AND is_private = 0
+        ORDER BY created_at`,
+      [req.params.id]
+    );
+    return res.json({ success: true, data: comments });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al consultar la conversación' } });
+  }
+});
+
+router.post('/me/:id/comments', requireCoreAuth, async (req, res) => {
+  const userId = String(req.user?.id || '');
+  const content = String(req.body?.content || '').trim();
+  if (!content) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Escribe un mensaje' } });
+  if (content.length > 5000) return res.status(400).json({ success: false, error: { code: 'COMMENT_TOO_LONG', message: 'El mensaje no puede exceder 5000 caracteres' } });
+  let connection: any;
+  let transactionStarted = false;
+  try {
+    connection = await pool.getConnection();
+    const [[ticket]]: any = await connection.query(
+      'SELECT id FROM tickets WHERE id = ? AND deleted_at IS NULL AND (requester_id = ? OR assigned_to = ?) LIMIT 1',
+      [req.params.id, userId, userId]
+    );
+    if (!ticket) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Ticket no encontrado' } });
+    const authorName = req.user?.name || req.user?.full_name || 'Solicitante';
+    await connection.beginTransaction();
+    transactionStarted = true;
+    const [result]: any = await connection.query(
+      'INSERT INTO ticket_comments (ticket_id, author_id, author_name, is_private, content) VALUES (?, ?, ?, 0, ?)',
+      [req.params.id, userId, authorName, content]
+    );
+    // La actividad de la conversación debe reflejarse también en la bandeja.
+    await connection.query('UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
+    await connection.commit();
+    transactionStarted = false;
+    await logAudit(userId, authorName, 'ticket.self.comment.create', 'ticket_comment', result.insertId, null, { ticket_id: Number(req.params.id), is_private: false, content }, req.ip, req.get('user-agent'));
+    const [[created]]: any = await pool.query('SELECT id, author_id, author_name, content, created_at FROM ticket_comments WHERE id = ? LIMIT 1', [result.insertId]);
+    return res.status(201).json({ success: true, data: created, message: 'Respuesta enviada' });
+  } catch (err) {
+    if (transactionStarted) await connection.rollback();
+    console.error(err);
+    return res.status(500).json({ success: false, error: { code: 'DB_ERROR', message: 'Error al enviar la respuesta' } });
+  } finally {
+    connection?.release();
+  }
+});
+
 router.patch('/me/:id', requireCoreAuth, async (req, res) => {
   const userId = String(req.user?.id || '');
   const title = String(req.body?.title || '').trim();
