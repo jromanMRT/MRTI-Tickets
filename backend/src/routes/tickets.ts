@@ -69,6 +69,7 @@ router.get('/', requireAuth, async (req, res) => {
   if (scope === 'overdue') clauses.push(`s.code NOT IN (${terminalStatuses}) AND ${slaIsOverdueSql()}`);
   if (scope === 'at-risk') clauses.push(`s.code NOT IN (${terminalStatuses}) AND ${slaIsAtRiskSql()}`);
   if (scope === 'paused') clauses.push(`s.code NOT IN (${terminalStatuses}) AND t.sla_paused_since IS NOT NULL`);
+  if (scope === 'escalated') clauses.push(`s.code NOT IN (${terminalStatuses}) AND t.escalated_at IS NOT NULL`);
   if (req.query.q) {
     clauses.push('(t.folio LIKE ? OR t.title LIKE ? OR t.requester_name LIKE ? OR t.origin_area_name LIKE ? OR t.affected_device_internal_id LIKE ?)');
     const search = `%${String(req.query.q).trim()}%`;
@@ -89,7 +90,7 @@ router.get('/', requireAuth, async (req, res) => {
       `SELECT t.id, t.folio, t.title, t.priority_code, t.assigned_to,
               t.assigned_to_name, t.requester_name, t.created_at, t.updated_at,
               t.origin_area_name, t.origin_site_name, t.affected_device_internal_id,
-              t.affected_device_name, t.asset_uid,
+              t.affected_device_name, t.asset_uid, t.escalated_at,
               s.code AS status_code, s.name AS status_name,
               p.name AS priority_name,
               COALESCE(t.business_area_id, c.business_area_id) AS business_area_id, b.name AS business_area_name,
@@ -98,6 +99,9 @@ router.get('/', requireAuth, async (req, res) => {
               ${slaStateCaseSql(terminalStatuses)} AS sla_state,
               (SELECT COUNT(*) FROM ticket_comments tc WHERE tc.ticket_id = t.id) AS comment_count,
               (SELECT COUNT(*) FROM ticket_attachments ta WHERE ta.ticket_id = t.id) AS attachment_count
+              ,(SELECT GROUP_CONCAT(tt.name ORDER BY tt.name SEPARATOR ', ')
+                  FROM ticket_tag_links ttl JOIN ticket_tags tt ON tt.id = ttl.tag_id
+                 WHERE ttl.ticket_id = t.id AND tt.active = 1) AS tag_names
          FROM tickets t
          JOIN ticket_statuses s ON s.id = t.status_id
          LEFT JOIN ticket_priorities p ON p.code = t.priority_code

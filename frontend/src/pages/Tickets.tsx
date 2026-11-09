@@ -1,4 +1,5 @@
 import { type ColumnDef, type SortingState } from '@tanstack/react-table';
+import type { RowSelectionState } from '@tanstack/react-table';
 import { FormEvent, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MessageSquare, Paperclip, Plus, Search, X } from 'lucide-react';
@@ -16,12 +17,15 @@ import { DataTable, type ColumnFiltersState } from '@/components/ui/data-table';
 import { exportCsv } from '@/lib/export-csv';
 import { TicketQueueStats } from '@/components/TicketQueueStats';
 import { TicketWorkspacePanel } from '@/components/TicketWorkspacePanel';
+import { WorkbenchSearch } from '@/components/WorkbenchSearch';
+import { TicketBulkActions } from '@/components/TicketBulkActions';
 
 interface TicketRow {
   id: number; folio: string; title: string; status_code: string; status_name: string;
   priority_code: string; priority_name: string; assigned_to_name?: string; requester_name?: string;
   created_at: string; updated_at: string; origin_area_name?: string; origin_site_name?: string;
   affected_device_internal_id?: string; affected_device_name?: string; business_area_name?: string;
+  escalated_at?: string | null; tag_names?: string | null;
   sla_state: 'completed' | 'none' | 'paused' | 'overdue' | 'at_risk' | 'on_track'; sla_deadline_effective?: string;
   comment_count: number; attachment_count: number;
 }
@@ -32,7 +36,7 @@ interface TicketPage { items: TicketRow[]; page: number; limit: number; total: n
 const queueOptions = [
   { value: '', label: 'Todos' }, { value: 'open', label: 'Activos' }, { value: 'mine', label: 'Mis asignados' },
   { value: 'unassigned', label: 'Sin asignar' }, { value: 'overdue', label: 'SLA vencido' }, { value: 'at-risk', label: 'En riesgo' },
-  { value: 'paused', label: 'En espera' },
+  { value: 'paused', label: 'En espera' }, { value: 'escalated', label: 'Escalados' },
 ];
 
 function formatDate(value: string) {
@@ -88,6 +92,7 @@ const columns: ColumnDef<TicketRow, unknown>[] = [
             <Link className="text-sm font-bold text-ore-600 hover:underline dark:text-ore-300" to={panelSearch(t.id)} aria-label={`Abrir ${t.folio} en el panel operativo`}>{t.folio}</Link>
           </div>
           <strong className="mt-1.5 block max-w-[380px] truncate text-sm text-stone-800 dark:text-stone-100">{t.title}</strong>
+          {(t.escalated_at || t.tag_names) && <span className="mt-1 flex flex-wrap gap-1">{t.escalated_at && <Badge variant="danger" className="text-[0.58rem]">Escalado</Badge>}{t.tag_names?.split(', ').slice(0, 2).map((tag) => <Badge key={tag} variant="outline" className="text-[0.58rem]">{tag}</Badge>)}</span>}
           <small className="mt-0.5 block text-xs text-stone-400">{t.origin_area_name || t.origin_site_name || 'Sin ubicación'}{t.affected_device_internal_id ? ` · ${t.affected_device_internal_id}` : ''}</small>
         </div>
       );
@@ -170,6 +175,8 @@ const columns: ColumnDef<TicketRow, unknown>[] = [
 function Tickets() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [draftQuery, setDraftQuery] = useState(searchParams.get('q') || '');
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selectionRevision, setSelectionRevision] = useState(0);
 
   const queryKey = searchParams.toString();
 
@@ -265,6 +272,23 @@ function Tickets() {
   }
 
   const current = pageData ?? { items: [], page: 1, limit: 25, total: 0, totalPages: 1 };
+  const selectedRows = current.items.filter((ticket) => rowSelection[String(ticket.id)]);
+
+  function clearSelection() {
+    setRowSelection({});
+    setSelectionRevision((value) => value + 1);
+  }
+
+  function exportSelected() {
+    const headers = ['Folio', 'Título', 'Prioridad', 'Estado', 'SLA', 'Área', 'Solicitante', 'Responsable', 'Creado', 'Actualizado'];
+    const rows = selectedRows.map((ticket) => [
+      ticket.folio, ticket.title, ticket.priority_code, ticket.status_name,
+      slaLabelMap[ticket.sla_state] || 'Sin SLA', ticket.business_area_name || '',
+      ticket.requester_name || '', ticket.assigned_to_name || '',
+      formatDate(ticket.created_at), formatDate(ticket.updated_at),
+    ]);
+    exportCsv(`tickets-seleccion-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  }
 
   return (
     <div className="grid gap-6">
@@ -280,7 +304,11 @@ function Tickets() {
         </Button>
       </div>
 
+      <WorkbenchSearch />
+
       <TicketQueueStats />
+
+      <TicketBulkActions ticketIds={selectedRows.map((ticket) => ticket.id)} onDone={clearSelection} onExport={exportSelected} />
 
       {/* Queue tabs */}
       <Tabs value={searchParams.get('scope') || ''} onValueChange={(value) => updateParam('scope', value)}>
@@ -341,6 +369,7 @@ function Tickets() {
         <Card className="p-5"><p className="text-sm text-mrt-bad dark:text-mrt-bad-light">No se pudieron cargar los tickets</p></Card>
       ) : (
         <DataTable
+          key={selectionRevision}
           columns={tableColumns}
           data={current.items}
           sorting={sorting}
@@ -360,6 +389,7 @@ function Tickets() {
           onExportCsv={handleExportCsv}
           enableRowSelection
           getRowId={(ticket) => String(ticket.id)}
+          onRowSelectionChange={(updater) => setRowSelection((previous) => typeof updater === 'function' ? updater(previous) : updater)}
           tableId="tickets"
         />
       )}

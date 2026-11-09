@@ -25,6 +25,7 @@ import businessAreasRouter from './routes/businessAreas';
 import auditEventsRouter from './routes/auditEvents';
 import { auditMutations } from './middlewares/auditMutations';
 import ticketUserCreationLimitsRouter from './routes/ticketUserCreationLimits';
+import workbenchRouter from './routes/workbench';
 
 export function createApp() {
   const app = express();
@@ -48,6 +49,9 @@ export function createApp() {
   app.get('/api/session', requireAuth, (req, res) => {
     res.json({ success: true, data: req.user });
   });
+  // Debe montarse antes de /api/tickets/:id para que "workbench" no sea
+  // interpretado como un id. Conserva el prefijo de permisos "tickets".
+  app.use('/api/tickets/workbench', workbenchRouter);
   app.use('/api/tickets', ticketsRouter);
   app.use('/api/tickets-self', ticketsSelfRouter);
   app.use('/api/assignees', assigneesRouter);
