@@ -14,6 +14,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable, type ColumnFiltersState } from '@/components/ui/data-table';
 import { exportCsv } from '@/lib/export-csv';
+import { TicketQueueStats } from '@/components/TicketQueueStats';
+import { TicketWorkspacePanel } from '@/components/TicketWorkspacePanel';
 
 interface TicketRow {
   id: number; folio: string; title: string; status_code: string; status_name: string;
@@ -63,6 +65,12 @@ const SORT_REVERSE: Record<string, string> = {
   updated: 'updated_at', newest: 'created_at', priority: 'priority_code',
 };
 
+function panelSearch(ticketId: number) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('ticket', String(ticketId));
+  return `?${params.toString()}`;
+}
+
 const columns: ColumnDef<TicketRow, unknown>[] = [
   {
     id: 'ticket',
@@ -77,7 +85,7 @@ const columns: ColumnDef<TicketRow, unknown>[] = [
         <div>
           <div className="flex items-center gap-2">
             <Badge variant={priorityVariantMap[t.priority_code?.toLowerCase()] || 'default'}>{t.priority_code}</Badge>
-            <Link className="text-sm font-bold text-ore-600 hover:underline dark:text-ore-300" to={`/tickets/${t.id}`}>{t.folio}</Link>
+            <Link className="text-sm font-bold text-ore-600 hover:underline dark:text-ore-300" to={panelSearch(t.id)} aria-label={`Abrir ${t.folio} en el panel operativo`}>{t.folio}</Link>
           </div>
           <strong className="mt-1.5 block max-w-[380px] truncate text-sm text-stone-800 dark:text-stone-100">{t.title}</strong>
           <small className="mt-0.5 block text-xs text-stone-400">{t.origin_area_name || t.origin_site_name || 'Sin ubicación'}{t.affected_device_internal_id ? ` · ${t.affected_device_internal_id}` : ''}</small>
@@ -272,6 +280,8 @@ function Tickets() {
         </Button>
       </div>
 
+      <TicketQueueStats />
+
       {/* Queue tabs */}
       <Tabs value={searchParams.get('scope') || ''} onValueChange={(value) => updateParam('scope', value)}>
         <TabsList>
@@ -353,6 +363,7 @@ function Tickets() {
           tableId="tickets"
         />
       )}
+      <TicketWorkspacePanel ticketId={searchParams.get('ticket')} onClose={() => updateParam('ticket', '', false)} />
     </div>
   );
 }
