@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, Upload, MessageSquare, Paperclip, Clock, User, MapPin, Monitor, Tag, CalendarDays, Shield } from 'lucide-react';
+import { ArrowLeft, Download, Upload, Paperclip, User, MapPin, Monitor, Tag, CalendarDays, Shield } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +10,7 @@ import { ticketKeys, catalogKeys } from '@/lib/query-keys';
 import { commentSchema, statusChangeSchema, assignSchema, type CommentFormData, type StatusChangeFormData, type AssignFormData } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SelectNative } from '@/components/ui/select-native';
